@@ -1,0 +1,8 @@
+{
+  "appId": "com.potolokpro.app",
+  "appName": "ПотолокПро",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  }
+}

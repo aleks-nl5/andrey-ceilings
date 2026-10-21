@@ -1,0 +1,409 @@
+import React from 'react';
+import { RoomShape, RoomOptions } from '../types/database';
+
+interface RoomBlueprintProps {
+  shape: RoomShape;
+  length: number;
+  width: number;
+  height: number;
+  sideA?: number;
+  sideB?: number;
+  sideC?: number;
+  sideD?: number;
+  sideE?: number;
+  sideF?: number;
+  diagonal1?: number;
+  diagonal2?: number;
+  area: number;
+  perimeter: number;
+  options: Partial<RoomOptions>;
+  canvasColorName?: string;
+  className?: string;
+  isPrint?: boolean;
+}
+
+export const RoomBlueprint: React.FC<RoomBlueprintProps> = ({
+  shape,
+  length,
+  width,
+  height,
+  sideA,
+  sideB,
+  sideC,
+  sideD,
+  sideE,
+  sideF,
+  diagonal1,
+  diagonal2,
+  area,
+  perimeter,
+  options,
+  canvasColorName,
+  className = '',
+  isPrint = false,
+}) => {
+  const svgWidth = 420;
+  const svgHeight = 280;
+  const padding = 45;
+  const innerW = svgWidth - padding * 2;
+  const innerH = svgHeight - padding * 2;
+
+  // Generate polygon points based on room shape
+  let pointsStr = '';
+  let polygonPoints: [number, number][] = [];
+  let diagonalsToDraw: { x1: number; y1: number; x2: number; y2: number; label?: string }[] = [];
+  let sideLabels: { x: number; y: number; text: string; align?: 'center' | 'left' | 'right' }[] = [];
+
+  const l = Math.max(0.1, length || 4);
+  const w = Math.max(0.1, width || 3);
+
+  if (shape === 'rectangle' || shape === 'square') {
+    const isSquare = shape === 'square';
+    const effL = isSquare ? l : l;
+    const effW = isSquare ? l : w;
+
+    // Scale to fit inner box preserving aspect ratio
+    const ratio = effL / effW;
+    let boxW = innerW;
+    let boxH = innerW / ratio;
+
+    if (boxH > innerH) {
+      boxH = innerH;
+      boxW = innerH * ratio;
+    }
+
+    const startX = padding + (innerW - boxW) / 2;
+    const startY = padding + (innerH - boxH) / 2;
+
+    const pA: [number, number] = [startX, startY];
+    const pB: [number, number] = [startX + boxW, startY];
+    const pC: [number, number] = [startX + boxW, startY + boxH];
+    const pD: [number, number] = [startX, startY + boxH];
+
+    polygonPoints = [pA, pB, pC, pD];
+    pointsStr = polygonPoints.map((p) => p.join(',')).join(' ');
+
+    const calcDiag = Math.round(Math.hypot(effL, effW) * 100) / 100;
+    const d1Val = diagonal1 ? diagonal1 : calcDiag;
+    const d2Val = diagonal2 ? diagonal2 : calcDiag;
+
+    diagonalsToDraw = [
+      { x1: pA[0], y1: pA[1], x2: pC[0], y2: pC[1], label: `d1 = ${d1Val}м` },
+      { x1: pB[0], y1: pB[1], x2: pD[0], y2: pD[1], label: `d2 = ${d2Val}м` },
+    ];
+
+    sideLabels = [
+      { x: startX + boxW / 2, y: startY - 12, text: `A: ${effL} м` },
+      { x: startX + boxW + 14, y: startY + boxH / 2 + 4, text: `B: ${effW} м`, align: 'left' },
+      { x: startX + boxW / 2, y: startY + boxH + 20, text: `C: ${effL} м` },
+      { x: startX - 14, y: startY + boxH / 2 + 4, text: `D: ${effW} м`, align: 'right' },
+    ];
+  } else if (shape === 'l_shaped') {
+    // 6-sided L shape
+    const a = sideA ?? l;
+    const b = sideB ?? w;
+    const c = sideC ?? (a * 0.55);
+    const d = sideD ?? (b * 0.45);
+    const e = sideE ?? Math.max(0.1, a - c);
+    const f = sideF ?? Math.max(0.1, b - d);
+
+    const scale = Math.min(innerW / a, innerH / b);
+    const startX = padding + (innerW - a * scale) / 2;
+    const startY = padding + (innerH - b * scale) / 2;
+
+    const p1: [number, number] = [startX, startY];
+    const p2: [number, number] = [startX + a * scale, startY];
+    const p3: [number, number] = [startX + a * scale, startY + d * scale];
+    const p4: [number, number] = [startX + (a - e) * scale, startY + d * scale];
+    const p5: [number, number] = [startX + (a - e) * scale, startY + b * scale];
+    const p6: [number, number] = [startX, startY + b * scale];
+
+    polygonPoints = [p1, p2, p3, p4, p5, p6];
+    pointsStr = polygonPoints.map((p) => p.join(',')).join(' ');
+
+    diagonalsToDraw = [
+      { x1: p1[0], y1: p1[1], x2: p4[0], y2: p4[1], label: diagonal1 ? `d1=${diagonal1}м` : undefined },
+      { x1: p6[0], y1: p6[1], x2: p2[0], y2: p2[1], label: undefined },
+    ];
+
+    sideLabels = [
+      { x: (p1[0] + p2[0]) / 2, y: p1[1] - 10, text: `A: ${a}м` },
+      { x: p2[0] + 12, y: (p2[1] + p3[1]) / 2 + 4, text: `B: ${d}м`, align: 'left' },
+      { x: (p3[0] + p4[0]) / 2, y: p3[1] + 14, text: `C: ${e}м` },
+      { x: p4[0] + 10, y: (p4[1] + p5[1]) / 2 + 4, text: `D: ${f}м`, align: 'left' },
+      { x: (p5[0] + p6[0]) / 2, y: p5[1] + 18, text: `E: ${c}м` },
+      { x: p6[0] - 12, y: (p6[1] + p1[1]) / 2 + 4, text: `F: ${b}м`, align: 'right' },
+    ];
+  } else {
+    // Custom trapezoid / irregular room
+    const boxW = innerW * 0.9;
+    const boxH = innerH * 0.85;
+    const startX = padding + innerW * 0.05;
+    const startY = padding + innerH * 0.08;
+
+    const pA: [number, number] = [startX + 20, startY + 10];
+    const pB: [number, number] = [startX + boxW, startY];
+    const pC: [number, number] = [startX + boxW - 25, startY + boxH];
+    const pD: [number, number] = [startX, startY + boxH - 10];
+
+    polygonPoints = [pA, pB, pC, pD];
+    pointsStr = polygonPoints.map((p) => p.join(',')).join(' ');
+
+    const d1Val = diagonal1 || Math.round(Math.hypot(l, w) * 1.05 * 10) / 10;
+    const d2Val = diagonal2 || Math.round(Math.hypot(l, w) * 0.95 * 10) / 10;
+
+    diagonalsToDraw = [
+      { x1: pA[0], y1: pA[1], x2: pC[0], y2: pC[1], label: `d1 = ${d1Val}м` },
+      { x1: pB[0], y1: pB[1], x2: pD[0], y2: pD[1], label: `d2 = ${d2Val}м` },
+    ];
+
+    sideLabels = [
+      { x: (pA[0] + pB[0]) / 2, y: startY - 8, text: `A: ${l} м` },
+      { x: pB[0] + 12, y: (pB[1] + pC[1]) / 2 + 4, text: `B: ${w} м`, align: 'left' },
+      { x: (pC[0] + pD[0]) / 2, y: startY + boxH + 18, text: `C: ${(sideC || l)} м` },
+      { x: startX - 12, y: (pD[1] + pA[1]) / 2 + 4, text: `D: ${(sideD || w)} м`, align: 'right' },
+    ];
+  }
+
+  // Calculate center of polygon for area badge and chandelier
+  const centerX = polygonPoints.reduce((acc, p) => acc + p[0], 0) / (polygonPoints.length || 1);
+  const centerY = polygonPoints.reduce((acc, p) => acc + p[1], 0) / (polygonPoints.length || 1);
+
+  // Spotlights distribution
+  const spotsCount = options.spotsGX53Count || 0;
+  const spotsToDraw: [number, number][] = [];
+  if (spotsCount > 0) {
+    const count = Math.min(spotsCount, 12);
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2;
+      const rX = Math.min(60, innerW * 0.25);
+      const rY = Math.min(45, innerH * 0.25);
+      spotsToDraw.push([
+        centerX + Math.cos(angle) * rX,
+        centerY + Math.sin(angle) * rY,
+      ]);
+    }
+  }
+
+  return (
+    <div className={`${isPrint ? 'relative bg-white text-slate-900 w-full' : 'relative overflow-hidden rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm p-3'} ${className}`}>
+      {/* Blueprint Header (hidden in clean print mode to avoid duplication) */}
+      {!isPrint && (
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-2 pb-2 border-b border-slate-200 dark:border-slate-800/80 text-xs">
+          <div className="flex items-center gap-1.5 font-mono text-cyan-600 dark:text-cyan-400 font-semibold">
+            <span className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
+            СХЕМА ТА ДІАГОНАЛІ
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono">
+              S: <strong className="text-slate-900 dark:text-white font-bold">{area}</strong> м²
+            </span>
+            <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono">
+              P: <strong className="text-slate-900 dark:text-white font-bold">{perimeter}</strong> м
+            </span>
+            <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono">
+              H: <strong className="text-slate-900 dark:text-white font-bold">{height || 2.7}</strong> м
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* SVG Canvas */}
+      <div className="w-full flex justify-center items-center select-none">
+        <svg
+          viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+          className={`w-full ${isPrint ? 'max-w-[500px]' : 'max-w-[480px] drop-shadow-sm'} h-auto`}
+        >
+          <defs>
+            <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+              <path d="M 20 0 L 0 0 0 20" fill="none" stroke={isPrint ? '#f1f5f9' : '#e2e8f0'} strokeWidth="0.8" className="dark:stroke-slate-800" />
+            </pattern>
+            <linearGradient id="polyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#0284c7" stopOpacity={isPrint ? '0.12' : '0.22'} />
+              <stop offset="100%" stopColor="#0369a1" stopOpacity={isPrint ? '0.06' : '0.10'} />
+            </linearGradient>
+            <filter id="shadowGlow" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor="#38bdf8" floodOpacity="0.6" />
+            </filter>
+          </defs>
+
+          {/* Technical blueprint grid background */}
+          <rect width={svgWidth} height={svgHeight} fill={isPrint ? '#ffffff' : 'url(#grid)'} rx="8" />
+
+          {/* Diagonals (Orange Dashed Lines) */}
+          {diagonalsToDraw.map((d, idx) => (
+            <g key={`diag-${idx}`}>
+              <line
+                x1={d.x1}
+                y1={d.y1}
+                x2={d.x2}
+                y2={d.y2}
+                stroke={isPrint ? '#000000' : '#f59e0b'}
+                strokeWidth={isPrint ? '1.5' : '1.8'}
+                strokeDasharray="5,4"
+                opacity={isPrint ? '1' : '0.85'}
+              />
+              {d.label && (
+                <text
+                  x={(d.x1 + d.x2) / 2}
+                  y={(d.y1 + d.y2) / 2 - 4}
+                  fill={isPrint ? '#000000' : '#fbbf24'}
+                  fontSize="10"
+                  fontFamily="monospace"
+                  fontWeight="700"
+                  textAnchor="middle"
+                  className="select-none"
+                >
+                  {d.label}
+                </text>
+              )}
+            </g>
+          ))}
+
+          {/* Curtain Niche (ПК-5) representation if selected */}
+          {options.curtainNicheMeters && options.curtainNicheMeters > 0 && polygonPoints.length >= 2 && (
+            <line
+              x1={polygonPoints[0][0] + 5}
+              y1={polygonPoints[0][1] + 12}
+              x2={polygonPoints[1][0] - 5}
+              y2={polygonPoints[1][1] + 12}
+              stroke={isPrint ? '#000000' : '#a855f7'}
+              strokeWidth="3"
+              strokeDasharray="4,2"
+            />
+          )}
+
+          {/* Light Lines if selected */}
+          {options.lightLinesMeters && options.lightLinesMeters > 0 && (
+            <line
+              x1={centerX - 50}
+              y1={centerY}
+              x2={centerX + 50}
+              y2={centerY}
+              stroke={isPrint ? '#000000' : '#0284c7'}
+              strokeWidth="4"
+            />
+          )}
+
+          {/* Main Ceiling Polygon */}
+          <polygon
+            points={pointsStr}
+            fill={isPrint ? '#ffffff' : 'url(#polyGrad)'}
+            stroke={isPrint ? '#000000' : '#38bdf8'}
+            strokeWidth={isPrint ? '2.5' : '3'}
+            strokeLinejoin="round"
+          />
+
+          {/* Corner Vertices & Labels */}
+          {polygonPoints.map((pt, idx) => {
+            const letter = String.fromCharCode(65 + idx); // A, B, C, D...
+            return (
+              <g key={`vertex-${idx}`}>
+                <circle cx={pt[0]} cy={pt[1]} r="5" fill={isPrint ? '#000000' : '#0284c7'} stroke={isPrint ? '#ffffff' : '#0f172a'} strokeWidth="2" />
+                <circle cx={pt[0]} cy={pt[1]} r="10" fill="transparent" />
+                <text
+                  x={pt[0]}
+                  y={pt[1] - 8}
+                  fill={isPrint ? '#000000' : '#94a3b8'}
+                  fontSize="11"
+                  fontWeight="800"
+                  textAnchor="middle"
+                >
+                  {letter}
+                </text>
+              </g>
+            );
+          })}
+
+          {/* Side length labels */}
+          {sideLabels.map((lbl, idx) => (
+            <text
+              key={`side-${idx}`}
+              x={lbl.x}
+              y={lbl.y}
+              fill={isPrint ? '#000000' : '#e2e8f0'}
+              fontSize="11"
+              fontFamily="monospace"
+              fontWeight="700"
+              textAnchor={lbl.align === 'left' ? 'start' : lbl.align === 'right' ? 'end' : 'middle'}
+            >
+              {lbl.text}
+            </text>
+          ))}
+
+          {/* Center Info Badge (Area & Canvas Type) */}
+          <g transform={`translate(${centerX - 48}, ${centerY - 22})`}>
+            <rect 
+              width="96" 
+              height="38" 
+              rx="6" 
+              fill={isPrint ? '#ffffff' : '#0f172a'} 
+              fillOpacity={isPrint ? '1' : '0.88'} 
+              stroke={isPrint ? '#000000' : '#334155'} 
+              strokeWidth={isPrint ? '1' : '1.5'} 
+            />
+            <text x="48" y="16" fill={isPrint ? '#000000' : '#f8fafc'} fontSize="12" fontWeight="bold" textAnchor="middle" fontFamily="monospace">
+              {area} м²
+            </text>
+            <text x="48" y="30" fill={isPrint ? '#000000' : '#38bdf8'} fontSize="9" fontWeight="600" textAnchor="middle">
+              {canvasColorName || 'Стеля'}
+            </text>
+          </g>
+
+          {/* Chandelier / Main Light icon at center */}
+          {options.chandeliersCount && options.chandeliersCount > 0 ? (
+            <g transform={`translate(${centerX}, ${centerY + 24})`}>
+              <circle cx="0" cy="0" r="10" fill={isPrint ? '#000000' : '#f59e0b'} />
+              <circle cx="0" cy="0" r="4" fill="#ffffff" />
+            </g>
+          ) : null}
+
+          {/* Spotlight dots */}
+          {spotsToDraw.map((spot, idx) => (
+            <g key={`spot-${idx}`}>
+              <circle cx={spot[0]} cy={spot[1]} r="4" fill={isPrint ? '#000000' : '#d97706'} />
+              <circle cx={spot[0]} cy={spot[1]} r="2" fill="#ffffff" />
+            </g>
+          ))}
+
+          {/* Pipe Pass indicator if selected */}
+          {options.pipePassCount && options.pipePassCount > 0 && polygonPoints.length > 0 && (
+            <g transform={`translate(${polygonPoints[0][0] + 16}, ${polygonPoints[0][1] + 16})`}>
+              <circle cx="0" cy="0" r="6" fill={isPrint ? '#000000' : '#ef4444'} />
+              <text x="10" y="3" fill={isPrint ? '#000000' : '#b91c1c'} fontSize="9" fontWeight="bold">Труба</text>
+            </g>
+          )}
+        </svg>
+      </div>
+
+      {/* Blueprint Legend / Footer */}
+      <div className={`mt-2 pt-2 border-t ${isPrint ? 'border-gray-300 text-gray-700' : 'border-slate-800/80 text-slate-400'} flex flex-wrap items-center justify-between text-[11px] gap-2`}>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1">
+            <span className="w-2.5 h-0.5 bg-amber-500 rounded-sm" />
+            <span className="font-medium">Діагоналі (розкрій)</span>
+          </div>
+          {options.spotsGX53Count ? (
+            <div className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-yellow-500" />
+              <span>Точки світла ({options.spotsGX53Count})</span>
+            </div>
+          ) : null}
+          {options.pipePassCount ? (
+            <div className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-red-500" />
+              <span>Обводи труб ({options.pipePassCount})</span>
+            </div>
+          ) : null}
+          {options.curtainNicheMeters ? (
+            <div className="flex items-center gap-1">
+              <span className="w-3 h-0.5 bg-purple-500 rounded-sm" />
+              <span>Ніша штор ({options.curtainNicheMeters} м)</span>
+            </div>
+          ) : null}
+        </div>
+        <span className={`${isPrint ? 'text-slate-500' : 'text-slate-500'} font-mono text-[10px]`}>Масштаб 1:1 авто</span>
+      </div>
+    </div>
+  );
+};
