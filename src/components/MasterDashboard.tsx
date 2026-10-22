@@ -201,34 +201,31 @@ export const MasterDashboard: React.FC<MasterDashboardProps> = ({
         </div>
       )}
 
-      {/* 2. MASTER'S FOUR BIG QUICK-ACTION TILES */}
+      {/* 2. MASTER'S FOUR QUICK-ACTION TILES (2 per row on mobile) */}
       <div>
-        <h3 className="text-xs uppercase font-extrabold tracking-wider text-slate-500 dark:text-slate-400 mb-3 px-1">
+        <h3 className="text-xs uppercase font-extrabold tracking-wider text-slate-500 dark:text-slate-400 mb-2.5 px-1">
           Швидкі інструменти майстра
         </h3>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
           {/* Tile 1: New Measurement */}
           <button
             type="button"
             onClick={() => onStartNewMeasurement()}
-            className="group p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-cyan-400 dark:hover:border-cyan-600 shadow-sm hover:shadow-md transition text-left flex flex-col justify-between min-h-[140px] cursor-pointer"
+            className="group p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-cyan-400 dark:hover:border-cyan-600 shadow-xs hover:shadow-md transition text-left flex flex-col justify-between min-h-[94px] sm:min-h-[110px] cursor-pointer"
           >
             <div className="flex items-center justify-between">
-              <div className="w-12 h-12 rounded-xl bg-cyan-100 dark:bg-cyan-950/70 text-cyan-600 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-800 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <Ruler className="w-6 h-6 stroke-[2.2]" />
+              <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl bg-cyan-100 dark:bg-cyan-950/70 text-cyan-600 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-800 flex items-center justify-center group-hover:scale-105 transition-transform">
+                <Ruler className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.2]" />
               </div>
-              <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-cyan-50 dark:bg-cyan-950 text-cyan-700 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-800">
+              <span className="text-[10px] sm:text-[11px] font-bold px-1.5 py-0.5 rounded bg-cyan-50 dark:bg-cyan-950 text-cyan-700 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-800">
                 + новий
               </span>
             </div>
             <div>
-              <h4 className="text-base font-extrabold text-slate-900 dark:text-white group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors">
+              <h4 className="text-xs sm:text-base font-extrabold text-slate-900 dark:text-white group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors leading-tight">
                 Швидкий замір
               </h4>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Креслення пальцем, кути, діагоналі та розрахунок полотна
-              </p>
             </div>
           </button>
 
@@ -236,23 +233,17 @@ export const MasterDashboard: React.FC<MasterDashboardProps> = ({
           <button
             type="button"
             onClick={() => onNavigateTab('calculator')}
-            className="group p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-cyan-400 dark:hover:border-cyan-600 shadow-sm hover:shadow-md transition text-left flex flex-col justify-between min-h-[140px] cursor-pointer"
+            className="group p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-cyan-400 dark:hover:border-cyan-600 shadow-xs hover:shadow-md transition text-left flex flex-col justify-between min-h-[94px] sm:min-h-[110px] cursor-pointer"
           >
             <div className="flex items-center justify-between">
-              <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-950/70 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <Calculator className="w-6 h-6 stroke-[2.2]" />
+              <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl bg-blue-100 dark:bg-blue-950/70 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 flex items-center justify-center group-hover:scale-105 transition-transform">
+                <Calculator className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.2]" />
               </div>
-              <span className="text-[11px] font-mono text-slate-400">
-                калькулятор
-              </span>
             </div>
             <div>
-              <h4 className="text-base font-extrabold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+              <h4 className="text-xs sm:text-base font-extrabold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-tight">
                 Калькулятор
               </h4>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Миттєвий прорахунок ціни «під ключ» для клієнта на місці
-              </p>
             </div>
           </button>
 
@@ -260,23 +251,20 @@ export const MasterDashboard: React.FC<MasterDashboardProps> = ({
           <button
             type="button"
             onClick={() => onNavigateTab('objects')}
-            className="group p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-cyan-400 dark:hover:border-cyan-600 shadow-sm hover:shadow-md transition text-left flex flex-col justify-between min-h-[140px] cursor-pointer"
+            className="group p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-cyan-400 dark:hover:border-cyan-600 shadow-xs hover:shadow-md transition text-left flex flex-col justify-between min-h-[94px] sm:min-h-[110px] cursor-pointer"
           >
             <div className="flex items-center justify-between">
-              <div className="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-950/70 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <Building2 className="w-6 h-6 stroke-[2.2]" />
+              <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl bg-amber-100 dark:bg-amber-950/70 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800 flex items-center justify-center group-hover:scale-105 transition-transform">
+                <Building2 className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.2]" />
               </div>
-              <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+              <span className="text-[10px] sm:text-[11px] font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                 {activeObjectsCount} акт.
               </span>
             </div>
             <div>
-              <h4 className="text-base font-extrabold text-slate-900 dark:text-white group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors">
+              <h4 className="text-xs sm:text-base font-extrabold text-slate-900 dark:text-white group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors leading-tight">
                 Об'єкти та клієнти
               </h4>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                База замовників, адреси, кімнати, кошториси та договори
-              </p>
             </div>
           </button>
 
@@ -284,57 +272,51 @@ export const MasterDashboard: React.FC<MasterDashboardProps> = ({
           <button
             type="button"
             onClick={() => onNavigateTab('settings')}
-            className="group p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-cyan-400 dark:hover:border-cyan-600 shadow-sm hover:shadow-md transition text-left flex flex-col justify-between min-h-[140px] cursor-pointer"
+            className="group p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-cyan-400 dark:hover:border-cyan-600 shadow-xs hover:shadow-md transition text-left flex flex-col justify-between min-h-[94px] sm:min-h-[110px] cursor-pointer"
           >
             <div className="flex items-center justify-between">
-              <div className="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <Settings className="w-6 h-6 stroke-[2.2]" />
+              <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl bg-emerald-100 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center group-hover:scale-105 transition-transform">
+                <Settings className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.2]" />
               </div>
-              <span className="text-[11px] font-mono text-slate-400">
-                налаштування
-              </span>
             </div>
             <div>
-              <h4 className="text-base font-extrabold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+              <h4 className="text-xs sm:text-base font-extrabold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors leading-tight">
                 Налаштування
               </h4>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Редагування цін, полотна, профілі, послуги та дані компанії
-              </p>
             </div>
           </button>
         </div>
       </div>
 
-      {/* 3. RECENT ACTIVITY & METRICS SUMMARY */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center gap-3 shadow-xs">
-          <div className="p-2.5 rounded-lg bg-cyan-50 dark:bg-cyan-950 text-cyan-600 dark:text-cyan-400">
-            <Building2 className="w-5 h-5" />
+      {/* 3. METRICS SUMMARY (3 in a single horizontal line) */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
+        <div className="p-2 sm:p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center sm:items-center text-center sm:text-left gap-1.5 sm:gap-3 shadow-xs">
+          <div className="p-1.5 sm:p-2.5 rounded-lg bg-cyan-50 dark:bg-cyan-950 text-cyan-600 dark:text-cyan-400 shrink-0">
+            <Building2 className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
-          <div>
-            <span className="text-[11px] text-slate-500 dark:text-slate-400">Активних об'єктів</span>
-            <p className="text-lg font-bold text-slate-900 dark:text-white font-mono">{activeObjectsCount}</p>
-          </div>
-        </div>
-
-        <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center gap-3 shadow-xs">
-          <div className="p-2.5 rounded-lg bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400">
-            <Layers className="w-5 h-5" />
-          </div>
-          <div>
-            <span className="text-[11px] text-slate-500 dark:text-slate-400">Заміряно кімнат</span>
-            <p className="text-lg font-bold text-slate-900 dark:text-white font-mono">{totalRooms}</p>
+          <div className="min-w-0 w-full">
+            <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 block truncate leading-tight">Об'єктів</span>
+            <p className="text-sm sm:text-lg font-bold text-slate-900 dark:text-white font-mono leading-none mt-0.5 truncate">{activeObjectsCount}</p>
           </div>
         </div>
 
-        <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center gap-3 shadow-xs">
-          <div className="p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400">
-            <Ruler className="w-5 h-5" />
+        <div className="p-2 sm:p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center sm:items-center text-center sm:text-left gap-1.5 sm:gap-3 shadow-xs">
+          <div className="p-1.5 sm:p-2.5 rounded-lg bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 shrink-0">
+            <Layers className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
-          <div>
-            <span className="text-[11px] text-slate-500 dark:text-slate-400">Загальна площа</span>
-            <p className="text-lg font-bold text-slate-900 dark:text-white font-mono">{totalArea} м²</p>
+          <div className="min-w-0 w-full">
+            <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 block truncate leading-tight">Кімнат</span>
+            <p className="text-sm sm:text-lg font-bold text-slate-900 dark:text-white font-mono leading-none mt-0.5 truncate">{totalRooms}</p>
+          </div>
+        </div>
+
+        <div className="p-2 sm:p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center sm:items-center text-center sm:text-left gap-1.5 sm:gap-3 shadow-xs">
+          <div className="p-1.5 sm:p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 shrink-0">
+            <Ruler className="w-4 h-4 sm:w-5 sm:h-5" />
+          </div>
+          <div className="min-w-0 w-full">
+            <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 block truncate leading-tight">Площа</span>
+            <p className="text-sm sm:text-lg font-bold text-slate-900 dark:text-white font-mono leading-none mt-0.5 truncate">{totalArea} м²</p>
           </div>
         </div>
       </div>

@@ -411,8 +411,8 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({
                       : 'border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700'
                   }`}
                 >
-                  <div className="text-xs font-bold text-white">{item.label}</div>
-                  <div className="text-[10px] font-mono text-amber-400 mt-1 font-semibold">{item.badge}</div>
+                  <div className="text-xs font-bold text-slate-900 dark:text-white">{item.label}</div>
+                  <div className="text-[10px] font-mono text-amber-600 dark:text-amber-400 mt-1 font-semibold">{item.badge}</div>
                 </button>
               ))}
             </div>
@@ -420,7 +420,7 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({
 
           {/* 4. Profile system */}
           <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-3">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">
               {t.profileSystem}
             </span>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -439,7 +439,7 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({
                       : 'border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700'
                   }`}
                 >
-                  <div className="font-semibold text-white">{prof.label}</div>
+                  <div className="font-semibold text-slate-900 dark:text-white">{prof.label}</div>
                   <div className="text-[10px] font-mono text-cyan-400 mt-1">{prof.price} {currencySymbol}/м.п.</div>
                 </button>
               ))}
@@ -627,6 +627,39 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({
               <pre className="text-[11px] text-slate-700 dark:text-slate-300 whitespace-pre-wrap font-sans leading-relaxed">
                 {offerText}
               </pre>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold w-full sm:w-auto">
+                Надіслати кошторис:
+              </span>
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent(offerText)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300 dark:hover:bg-emerald-900 border border-emerald-200 dark:border-emerald-800 text-xs font-semibold transition"
+                title="Відправити у WhatsApp"
+              >
+                <span>WhatsApp</span>
+              </a>
+              <a
+                href={`viber://forward?text=${encodeURIComponent(offerText)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 dark:bg-purple-950/70 dark:text-purple-300 dark:hover:bg-purple-900 border border-purple-200 dark:border-purple-800 text-xs font-semibold transition"
+                title="Відправити у Viber"
+              >
+                <span>Viber</span>
+              </a>
+              <a
+                href={`https://t.me/share/url?url=&text=${encodeURIComponent(offerText)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-sky-50 hover:bg-sky-100 text-sky-700 dark:bg-sky-950/70 dark:text-sky-300 dark:hover:bg-sky-900 border border-sky-200 dark:border-sky-800 text-xs font-semibold transition"
+                title="Відправити у Telegram"
+              >
+                <span>Telegram</span>
+              </a>
             </div>
 
             <div className="flex gap-2">

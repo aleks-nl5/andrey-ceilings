@@ -378,8 +378,8 @@ export default function App() {
               <div className="space-y-6">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-slate-900 border border-slate-800 p-4 rounded-2xl">
                   <div>
-                    <h2 className="text-base font-bold text-white">{t.tabMeasurements}</h2>
-                    <p className="text-xs text-slate-400">
+                    <h2 className="text-base font-bold text-slate-900 dark:text-white">{t.tabMeasurements}</h2>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
                       Сенсорні креслення пальцем, діагоналі, площа, периметр, фотографії та чистий друк кошторису
                     </p>
                   </div>
@@ -395,13 +395,13 @@ export default function App() {
                 </div>
 
                 {measurements.length === 0 ? (
-                  <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-10 text-center space-y-3">
-                    <Ruler className="w-10 h-10 text-slate-600 mx-auto" />
-                    <p className="text-sm font-semibold text-slate-300">Замірів поки немає</p>
+                  <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-10 text-center space-y-3 shadow-xs">
+                    <Ruler className="w-10 h-10 text-slate-400 dark:text-slate-600 mx-auto" />
+                    <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">Замірів поки немає</p>
                     <button
                       type="button"
                       onClick={() => handleStartNewMeasurement()}
-                      className="mt-2 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-cyan-600 text-white text-xs font-bold"
+                      className="mt-2 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold shadow-md transition"
                     >
                       <Plus className="w-4 h-4" />
                       <span>{t.newMeasurement}</span>
@@ -414,7 +414,7 @@ export default function App() {
                       return (
                         <div
                           key={meas.id}
-                          className="bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl p-4 flex flex-col justify-between shadow-sm transition group"
+                          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-cyan-400 dark:hover:border-slate-700 rounded-2xl p-4 flex flex-col justify-between shadow-xs hover:shadow-md transition group"
                         >
                           <div>
                             <div className="flex items-start justify-between gap-2 mb-2">
@@ -431,16 +431,16 @@ export default function App() {
                               </span>
                             </div>
 
-                            <div className="grid grid-cols-3 gap-2 py-2 border-y border-slate-200 dark:border-slate-800/80 my-2 text-center text-xs">
-                              <div className="bg-slate-100 dark:bg-slate-950 p-1.5 rounded-lg border border-slate-200 dark:border-slate-800">
+                            <div className="grid grid-cols-3 gap-2 py-2 border-y border-slate-100 dark:border-slate-800/80 my-2 text-center text-xs">
+                              <div className="bg-slate-50 dark:bg-slate-950 p-1.5 rounded-lg border border-slate-200 dark:border-slate-800">
                                 <span className="text-[10px] text-slate-500 dark:text-slate-400 block">{t.area}</span>
                                 <strong className="font-mono text-slate-900 dark:text-white">{meas.area} м²</strong>
                               </div>
-                              <div className="bg-slate-100 dark:bg-slate-950 p-1.5 rounded-lg border border-slate-200 dark:border-slate-800">
+                              <div className="bg-slate-50 dark:bg-slate-950 p-1.5 rounded-lg border border-slate-200 dark:border-slate-800">
                                 <span className="text-[10px] text-slate-500 dark:text-slate-400 block">{t.perimeter}</span>
                                 <strong className="font-mono text-slate-900 dark:text-white">{meas.perimeter} м</strong>
                               </div>
-                              <div className="bg-slate-100 dark:bg-slate-950 p-1.5 rounded-lg border border-slate-200 dark:border-slate-800">
+                              <div className="bg-slate-50 dark:bg-slate-950 p-1.5 rounded-lg border border-slate-200 dark:border-slate-800">
                                 <span className="text-[10px] text-slate-500 dark:text-slate-400 block">{t.height}</span>
                                 <strong className="font-mono text-slate-900 dark:text-white">{meas.height} м</strong>
                               </div>
@@ -451,7 +451,7 @@ export default function App() {
                                 <span className="text-slate-500 dark:text-slate-400">Полотно:</span> {meas.canvasBrand}
                               </div>
                               {meas.comments && (
-                                <p className="text-[10px] text-slate-700 dark:text-slate-400 italic line-clamp-2 bg-slate-100 dark:bg-slate-950 p-2 rounded-lg border border-slate-200 dark:border-slate-800/60 mt-1">
+                                <p className="text-[10px] text-slate-700 dark:text-slate-400 italic line-clamp-2 bg-slate-50 dark:bg-slate-950 p-2 rounded-lg border border-slate-200 dark:border-slate-800/60 mt-1">
                                   "{meas.comments}"
                                 </p>
                               )}
@@ -463,21 +463,21 @@ export default function App() {
                             </div>
                           </div>
 
-                          <div className="flex items-center justify-between gap-1.5 mt-4 pt-3 border-t border-slate-800">
+                          <div className="flex items-center justify-between gap-1.5 mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
                             <button
                               type="button"
                               onClick={() => handleEditMeasurement(meas)}
-                              className="flex-1 py-1.5 rounded-lg bg-cyan-600/90 hover:bg-cyan-600 text-white text-xs font-semibold transition"
+                              className="flex-1 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold transition"
                             >
                               Відкрити замір
                             </button>
                             <button
                               type="button"
                               onClick={() => setPrintMeasurement(meas)}
-                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-400 hover:text-white transition"
+                              className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition"
                               title="Друк / PDF"
                             >
-                              <Printer className="w-4 h-4" />
+                              <Printer className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
                             </button>
                             <button
                               type="button"
@@ -486,7 +486,7 @@ export default function App() {
                                   handleDeleteMeasurement(meas.id);
                                 }
                               }}
-                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-red-950 text-slate-400 hover:text-red-400 transition"
+                              className="p-1.5 rounded-lg bg-slate-100 hover:bg-red-50 dark:bg-slate-800 dark:hover:bg-red-950 text-slate-400 hover:text-red-500 transition"
                               title="Видалити"
                             >
                               ✕

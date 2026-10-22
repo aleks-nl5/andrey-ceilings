@@ -133,23 +133,50 @@ html:not(.dark) .text-slate-500 {
   color: #64748b !important;
 }
 
-/* Solid accent buttons, gradients, and white elements retain pure white text */
+/* White text becomes dark on cards in light mode, UNLESS inside colored solid buttons */
+html:not(.dark) .text-white {
+  color: #0f172a !important;
+}
+
+/* Base card text colors in light mode */
+html:not(.dark) .bg-slate-900,
+html:not(.dark) .bg-slate-900 h1,
+html:not(.dark) .bg-slate-900 h2,
+html:not(.dark) .bg-slate-900 h3,
+html:not(.dark) .bg-slate-900 h4,
+html:not(.dark) .bg-slate-900 p,
+html:not(.dark) .bg-slate-900 span,
+html:not(.dark) .bg-slate-950,
+html:not(.dark) .bg-slate-950 h1,
+html:not(.dark) .bg-slate-950 h2,
+html:not(.dark) .bg-slate-950 h3,
+html:not(.dark) .bg-slate-950 h4,
+html:not(.dark) .bg-slate-950 p,
+html:not(.dark) .bg-slate-950 span {
+  color: #0f172a;
+}
+
+/* Solid accent buttons and dark pills retain pure white text */
 html:not(.dark) button.bg-cyan-600,
+html:not(.dark) button.bg-cyan-600 *,
 html:not(.dark) button.bg-cyan-500,
+html:not(.dark) button.bg-cyan-500 *,
 html:not(.dark) button.bg-blue-600,
+html:not(.dark) button.bg-blue-600 *,
 html:not(.dark) button.bg-emerald-600,
+html:not(.dark) button.bg-emerald-600 *,
 html:not(.dark) button.bg-red-600,
+html:not(.dark) button.bg-red-600 *,
 html:not(.dark) a.bg-cyan-600,
-html:not(.dark) .bg-cyan-600,
-html:not(.dark) .bg-cyan-600 *,
-html:not(.dark) .bg-blue-600,
-html:not(.dark) .bg-blue-600 *,
-html:not(.dark) .bg-emerald-600,
-html:not(.dark) .bg-emerald-600 *,
-html:not(.dark) .bg-red-600,
-html:not(.dark) .bg-red-600 *,
-html:not(.dark) [class*="bg-gradient-"],
-html:not(.dark) [class*="bg-gradient-"] * {
+html:not(.dark) a.bg-cyan-600 *,
+html:not(.dark) .bg-cyan-600.text-white,
+html:not(.dark) .bg-cyan-600.text-white *,
+html:not(.dark) .bg-blue-600.text-white,
+html:not(.dark) .bg-blue-600.text-white *,
+html:not(.dark) .bg-emerald-600.text-white,
+html:not(.dark) .bg-emerald-600.text-white *,
+html:not(.dark) button.bg-gradient-to-r,
+html:not(.dark) button.bg-gradient-to-r * {
   color: #ffffff !important;
 }
 

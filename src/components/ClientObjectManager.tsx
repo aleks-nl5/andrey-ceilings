@@ -527,10 +527,11 @@ export const ClientObjectManager: React.FC<ClientObjectManagerProps> = ({
                           <p className="font-bold text-slate-900 dark:text-white text-sm">
                             {client.name}
                           </p>
-                          <div className="flex flex-wrap sm:justify-end gap-2 pt-1">
+                          <div className="flex flex-wrap sm:justify-end gap-1.5 pt-1">
                             <a
                               href={`tel:${client.phone}`}
-                              className="px-2 py-1 rounded-lg bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-bold flex items-center gap-1 hover:bg-emerald-200 transition"
+                              className="px-2.5 py-1 rounded-lg bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-bold flex items-center gap-1 hover:bg-emerald-200 transition text-[11px]"
+                              title="Зателефонувати"
                             >
                               <Phone className="w-3 h-3" />
                               <span>{client.phone}</span>
@@ -539,9 +540,28 @@ export const ClientObjectManager: React.FC<ClientObjectManagerProps> = ({
                               href={`https://wa.me/${client.phone.replace(/[^0-9]/g, '')}`}
                               target="_blank"
                               rel="noreferrer"
-                              className="px-2 py-1 rounded-lg bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold hover:bg-slate-300 transition"
+                              className="px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300 dark:hover:bg-emerald-900 border border-emerald-200 dark:border-emerald-800 font-semibold transition text-[11px]"
+                              title="WhatsApp"
                             >
                               WhatsApp
+                            </a>
+                            <a
+                              href={`viber://chat?number=%2B${client.phone.replace(/[^0-9]/g, '')}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="px-2 py-1 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 dark:bg-purple-950/70 dark:text-purple-300 dark:hover:bg-purple-900 border border-purple-200 dark:border-purple-800 font-semibold transition text-[11px]"
+                              title="Viber"
+                            >
+                              Viber
+                            </a>
+                            <a
+                              href={`https://t.me/+${client.phone.replace(/[^0-9]/g, '')}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="px-2 py-1 rounded-lg bg-sky-50 hover:bg-sky-100 text-sky-700 dark:bg-sky-950/70 dark:text-sky-300 dark:hover:bg-sky-900 border border-sky-200 dark:border-sky-800 font-semibold transition text-[11px]"
+                              title="Telegram"
+                            >
+                              Telegram
                             </a>
                           </div>
                         </div>
@@ -794,13 +814,13 @@ export const ClientObjectManager: React.FC<ClientObjectManagerProps> = ({
       {activeTab === 'clients' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredClients.length === 0 ? (
-            <div className="col-span-full bg-slate-900/60 border border-slate-800 rounded-2xl p-10 text-center space-y-3">
-              <User className="w-10 h-10 text-slate-600 mx-auto" />
-              <p className="text-sm font-medium text-slate-300">Клієнти не знайдені</p>
+            <div className="col-span-full bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-10 text-center space-y-3 shadow-xs">
+              <User className="w-10 h-10 text-slate-400 dark:text-slate-600 mx-auto" />
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Клієнти не знайдені</p>
               <button
                 type="button"
                 onClick={openNewClientModal}
-                className="mt-2 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-600 text-white text-xs font-bold"
+                className="mt-2 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold shadow-md transition"
               >
                 <Plus className="w-4 h-4" />
                 <span>{t.newClient}</span>
@@ -809,20 +829,21 @@ export const ClientObjectManager: React.FC<ClientObjectManagerProps> = ({
           ) : (
             filteredClients.map((client) => {
               const clientObjects = objects.filter((o) => o.clientId === client.id);
+              const cleanPhone = client.phone.replace(/[^0-9]/g, '');
               return (
                 <div
                   key={client.id}
-                  className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between shadow-sm hover:border-slate-700 transition"
+                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex flex-col justify-between shadow-xs hover:border-cyan-400 dark:hover:border-slate-700 transition"
                 >
                   <div className="space-y-2">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2">
-                        <div className="w-9 h-9 rounded-full bg-cyan-950 border border-cyan-800 flex items-center justify-center text-cyan-400 font-bold text-sm">
+                        <div className="w-9 h-9 rounded-full bg-cyan-50 dark:bg-cyan-950 border border-cyan-200 dark:border-cyan-800 flex items-center justify-center text-cyan-700 dark:text-cyan-400 font-bold text-sm">
                           {client.name.charAt(0)}
                         </div>
                         <div>
-                          <h3 className="text-sm font-bold text-white">{client.name}</h3>
-                          <span className="text-[10px] text-slate-400">
+                          <h3 className="text-sm font-bold text-slate-900 dark:text-white">{client.name}</h3>
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400">
                             Об’єктів у роботі: {clientObjects.length}
                           </span>
                         </div>
@@ -832,7 +853,7 @@ export const ClientObjectManager: React.FC<ClientObjectManagerProps> = ({
                         <button
                           type="button"
                           onClick={() => openEditClientModal(client)}
-                          className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition"
+                          className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition"
                           title={t.edit}
                         >
                           <Edit3 className="w-3.5 h-3.5" />
@@ -844,7 +865,7 @@ export const ClientObjectManager: React.FC<ClientObjectManagerProps> = ({
                               onDeleteClient(client.id);
                             }
                           }}
-                          className="p-1.5 rounded-lg bg-slate-800 hover:bg-red-950 text-slate-400 hover:text-red-400 transition"
+                          className="p-1.5 rounded-lg bg-slate-100 hover:bg-red-50 dark:bg-slate-800 dark:hover:bg-red-950 text-slate-400 hover:text-red-500 transition"
                           title={t.delete}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -852,20 +873,39 @@ export const ClientObjectManager: React.FC<ClientObjectManagerProps> = ({
                       </div>
                     </div>
 
-                    <div className="space-y-2 text-xs text-slate-300 pt-1">
-                      {/* Phone and Call / WhatsApp */}
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Phone className="w-3.5 h-3.5 text-slate-500" />
-                        <a href={`tel:${client.phone}`} className="text-cyan-400 hover:underline font-bold">
+                    <div className="space-y-2 text-xs text-slate-700 dark:text-slate-300 pt-1">
+                      {/* Phone and Call / WhatsApp / Viber / Telegram */}
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <a href={`tel:${client.phone}`} className="text-cyan-600 dark:text-cyan-400 hover:underline font-bold mr-1">
                           {client.phone}
                         </a>
                         <a
-                          href={`https://wa.me/${client.phone.replace(/[^0-9]/g, '')}`}
+                          href={`https://wa.me/${cleanPhone}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-[11px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 hover:bg-emerald-900 border border-emerald-800 font-medium"
+                          className="text-[11px] px-2 py-0.5 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300 dark:hover:bg-emerald-900 border border-emerald-200 dark:border-emerald-800 font-medium transition"
+                          title="WhatsApp"
                         >
-                          WhatsApp / Viber
+                          WhatsApp
+                        </a>
+                        <a
+                          href={`viber://chat?number=%2B${cleanPhone}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[11px] px-2 py-0.5 rounded bg-purple-50 hover:bg-purple-100 text-purple-700 dark:bg-purple-950/70 dark:text-purple-300 dark:hover:bg-purple-900 border border-purple-200 dark:border-purple-800 font-medium transition"
+                          title="Viber"
+                        >
+                          Viber
+                        </a>
+                        <a
+                          href={`https://t.me/+${cleanPhone}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[11px] px-2 py-0.5 rounded bg-sky-50 hover:bg-sky-100 text-sky-700 dark:bg-sky-950/70 dark:text-sky-300 dark:hover:bg-sky-900 border border-sky-200 dark:border-sky-800 font-medium transition"
+                          title="Telegram"
+                        >
+                          Telegram
                         </a>
                       </div>
 
@@ -874,43 +914,43 @@ export const ClientObjectManager: React.FC<ClientObjectManagerProps> = ({
                         <button
                           type="button"
                           onClick={() => exportClientToContacts(client, objects)}
-                          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-cyan-950 to-slate-900 border border-cyan-800/80 hover:border-cyan-600 text-cyan-300 text-xs font-semibold shadow-sm transition active:scale-98"
+                          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-slate-50 hover:bg-cyan-50 dark:bg-slate-950 dark:hover:bg-slate-900 border border-slate-200 hover:border-cyan-400 dark:border-slate-800 dark:hover:border-cyan-600 text-cyan-700 dark:text-cyan-300 text-xs font-semibold shadow-xs transition active:scale-98"
                         >
-                          <Contact2 className="w-4 h-4 text-cyan-400" />
+                          <Contact2 className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
                           <span>{t.saveToPhoneContacts}</span>
                         </button>
-                        <span className="text-[10px] text-slate-500 block text-center mt-1">
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400 block text-center mt-1">
                           При вхідному дзвінку на Android відобразиться ім’я клієнта
                         </span>
                       </div>
 
                       {client.email && (
                         <div className="flex items-center gap-2">
-                          <Mail className="w-3.5 h-3.5 text-slate-500" />
-                          <a href={`mailto:${client.email}`} className="text-slate-300 hover:underline">
+                          <Mail className="w-3.5 h-3.5 text-slate-400" />
+                          <a href={`mailto:${client.email}`} className="text-slate-600 dark:text-slate-300 hover:underline">
                             {client.email}
                           </a>
                         </div>
                       )}
 
                       <div className="flex items-start gap-2">
-                        <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0 mt-0.5" />
-                        <span className="text-slate-400">{client.address || 'Адреса не вказана'}</span>
+                        <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                        <span className="text-slate-600 dark:text-slate-400">{client.address || 'Адреса не вказана'}</span>
                       </div>
 
                       {client.notes && (
-                        <div className="text-[11px] text-slate-400 bg-slate-950 p-2 rounded-lg border border-slate-800 mt-1">
+                        <div className="text-[11px] text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-950 p-2 rounded-lg border border-slate-200 dark:border-slate-800 mt-1">
                           {client.notes}
                         </div>
                       )}
                     </div>
                   </div>
 
-                  <div className="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between">
+                  <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
                     <button
                       type="button"
                       onClick={() => openNewObjectModal(client.id)}
-                      className="text-xs text-cyan-400 hover:text-cyan-300 flex items-center gap-1 font-semibold"
+                      className="text-xs text-cyan-600 dark:text-cyan-400 hover:text-cyan-500 flex items-center gap-1 font-semibold"
                     >
                       <Plus className="w-3.5 h-3.5" />
                       <span>{t.newObject}</span>
@@ -926,16 +966,16 @@ export const ClientObjectManager: React.FC<ClientObjectManagerProps> = ({
       {/* Modal: Client */}
       {isClientModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden">
-            <div className="flex items-center justify-between p-4 border-b border-slate-800">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <User className="w-4 h-4 text-cyan-400" />
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <User className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
                 <span>{editingClient ? t.edit : t.newClient}</span>
               </h3>
               <button
                 type="button"
                 onClick={() => setIsClientModalOpen(false)}
-                className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white"
+                className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-white transition"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -943,59 +983,59 @@ export const ClientObjectManager: React.FC<ClientObjectManagerProps> = ({
 
             <form onSubmit={handleSaveClient} className="p-4 space-y-3.5">
               <div>
-                <label className="text-xs font-medium text-slate-300">ПІБ клієнта *</label>
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">ПІБ клієнта *</label>
                 <input
                   type="text"
                   required
                   value={clientName}
                   onChange={(e) => setClientName(e.target.value)}
                   placeholder="Шевченко Олексій"
-                  className="w-full mt-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
+                  className="w-full mt-1 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-cyan-500"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-medium text-slate-300">Номер телефону *</label>
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Номер телефону *</label>
                 <input
                   type="tel"
                   required
                   value={clientPhone}
                   onChange={(e) => setClientPhone(e.target.value)}
                   placeholder="+380 (67) 000-00-00"
-                  className="w-full mt-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500 font-mono"
+                  className="w-full mt-1 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-cyan-500 font-mono"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-medium text-slate-300">Email</label>
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Email</label>
                 <input
                   type="email"
                   value={clientEmail}
                   onChange={(e) => setClientEmail(e.target.value)}
                   placeholder="client@gmail.com"
-                  className="w-full mt-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
+                  className="w-full mt-1 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-cyan-500"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-medium text-slate-300">Основна адреса</label>
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Основна адреса</label>
                 <input
                   type="text"
                   value={clientAddress}
                   onChange={(e) => setClientAddress(e.target.value)}
                   placeholder="м. Київ, вул. Хрещатик, 15"
-                  className="w-full mt-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
+                  className="w-full mt-1 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-cyan-500"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-medium text-slate-300">Примітки по клієнту</label>
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Примітки по клієнту</label>
                 <textarea
                   rows={2}
                   value={clientNotes}
                   onChange={(e) => setClientNotes(e.target.value)}
                   placeholder="Звідки прийшов, побажання, особливості..."
-                  className="w-full mt-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
+                  className="w-full mt-1 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-cyan-500"
                 />
               </div>
 
@@ -1003,13 +1043,13 @@ export const ClientObjectManager: React.FC<ClientObjectManagerProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsClientModalOpen(false)}
-                  className="flex-1 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
+                  className="flex-1 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold transition"
                 >
                   {t.cancel}
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold shadow-md"
+                  className="flex-1 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold shadow-md transition"
                 >
                   {t.save}
                 </button>
@@ -1022,16 +1062,16 @@ export const ClientObjectManager: React.FC<ClientObjectManagerProps> = ({
       {/* Modal: Object */}
       {isObjectModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-4 border-b border-slate-800">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-cyan-400" />
+          <div className="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
                 <span>{editingObject ? t.edit : t.newObject}</span>
               </h3>
               <button
                 type="button"
                 onClick={() => setIsObjectModalOpen(false)}
-                className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white"
+                className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-white transition"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1039,12 +1079,12 @@ export const ClientObjectManager: React.FC<ClientObjectManagerProps> = ({
 
             <form onSubmit={handleSaveObject} className="p-4 space-y-3.5">
               <div>
-                <label className="text-xs font-medium text-slate-300">Клієнт (замовник) *</label>
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Клієнт (замовник) *</label>
                 <select
                   required
                   value={objClientId}
                   onChange={(e) => setObjClientId(e.target.value)}
-                  className="w-full mt-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
+                  className="w-full mt-1 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-cyan-500"
                 >
                   {clients.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -1055,24 +1095,24 @@ export const ClientObjectManager: React.FC<ClientObjectManagerProps> = ({
               </div>
 
               <div>
-                <label className="text-xs font-medium text-slate-300">Адреса об’єкта монтажу *</label>
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Адреса об’єкта монтажу *</label>
                 <input
                   type="text"
                   required
                   value={objAddress}
                   onChange={(e) => setObjAddress(e.target.value)}
                   placeholder="м. Київ, ЖК 'Нова Хвиля', кв. 45"
-                  className="w-full mt-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
+                  className="w-full mt-1 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-cyan-500"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-medium text-slate-300">Тип приміщення</label>
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Тип приміщення</label>
                   <select
                     value={objRoomType}
                     onChange={(e) => setObjRoomType(e.target.value)}
-                    className="w-full mt-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
+                    className="w-full mt-1 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white"
                   >
                     <option value="1-кімнатна квартира">1-кімнатна квартира</option>
                     <option value="2-кімнатна квартира">2-кімнатна квартира</option>
@@ -1085,11 +1125,11 @@ export const ClientObjectManager: React.FC<ClientObjectManagerProps> = ({
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-slate-300">Статус замовлення</label>
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Статус замовлення</label>
                   <select
                     value={objStatus}
                     onChange={(e) => setObjStatus(e.target.value as OrderStatus)}
-                    className="w-full mt-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-medium"
+                    className="w-full mt-1 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white font-medium"
                   >
                     <option value="measurement">{t.statusMeasurement}</option>
                     <option value="calculation">{t.statusCalculation}</option>
@@ -1103,40 +1143,40 @@ export const ClientObjectManager: React.FC<ClientObjectManagerProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-medium text-slate-300">Дата заміру</label>
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Дата заміру</label>
                   <input
                     type="date"
                     required
                     value={objMeasureDate}
                     onChange={(e) => setObjMeasureDate(e.target.value)}
-                    className="w-full mt-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
+                    className="w-full mt-1 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white"
                   />
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-slate-300">Дата установки (план)</label>
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Дата установки (план)</label>
                   <input
                     type="date"
                     value={objInstallDate}
                     onChange={(e) => setObjInstallDate(e.target.value)}
-                    className="w-full mt-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
+                    className="w-full mt-1 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-xs font-medium text-slate-300">Внесений аванс ({currencySymbol})</label>
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Внесений аванс ({currencySymbol})</label>
                 <input
                   type="number"
                   value={objPrepayment || ''}
                   onChange={(e) => setObjPrepayment(parseFloat(e.target.value) || 0)}
                   placeholder="0"
-                  className="w-full mt-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-mono"
+                  className="w-full mt-1 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white font-mono"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-medium text-slate-300">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                   Примітки до об’єкта (поверх, домофон, ліфт, доступ)
                 </label>
                 <textarea
@@ -1144,7 +1184,7 @@ export const ClientObjectManager: React.FC<ClientObjectManagerProps> = ({
                   value={objNotes}
                   onChange={(e) => setObjNotes(e.target.value)}
                   placeholder="5 поверх, ліфт працює, код домофону 45K..."
-                  className="w-full mt-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
+                  className="w-full mt-1 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white"
                 />
               </div>
 
@@ -1152,13 +1192,13 @@ export const ClientObjectManager: React.FC<ClientObjectManagerProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsObjectModalOpen(false)}
-                  className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
+                  className="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold transition"
                 >
                   {t.cancel}
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold shadow-md"
+                  className="flex-1 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold shadow-md transition"
                 >
                   {t.save}
                 </button>

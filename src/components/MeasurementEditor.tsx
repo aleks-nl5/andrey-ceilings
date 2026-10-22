@@ -260,21 +260,21 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
   return (
     <div className="space-y-6 pb-24 max-w-4xl mx-auto">
       {/* Top action header */}
-      <div className="sticky top-14 z-30 bg-slate-950/95 backdrop-blur border-b border-slate-800 p-3 -mx-4 sm:-mx-6 px-4 sm:px-6 flex items-center justify-between gap-3 shadow-md">
+      <div className="sticky top-14 z-30 bg-white/95 dark:bg-slate-950/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 p-3 -mx-4 sm:-mx-6 px-4 sm:px-6 flex items-center justify-between gap-3 shadow-md">
         <button
           type="button"
           onClick={onCancel}
-          className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition"
+          className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold transition"
         >
           <ChevronLeft className="w-4 h-4" />
           <span>{t.back}</span>
         </button>
 
         <div className="text-center">
-          <h2 className="text-base font-bold text-white leading-tight">
+          <h2 className="text-base font-bold text-slate-900 dark:text-white leading-tight">
             {initialMeasurement?.id ? t.edit : t.newMeasurement}
           </h2>
-          <span className="text-xs text-cyan-400 font-mono font-semibold">
+          <span className="text-xs text-cyan-600 dark:text-cyan-400 font-mono font-semibold">
             {effectiveArea} м² • {costDetails.totalCost.toLocaleString('uk-UA')} {currencySymbol}
           </span>
         </div>
@@ -283,10 +283,10 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
           <button
             type="button"
             onClick={() => setIsPrintModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition active:scale-95"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold border border-slate-300 dark:border-slate-700 transition active:scale-95"
             title="Друк / PDF"
           >
-            <Printer className="w-4 h-4 text-cyan-400" />
+            <Printer className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
             <span className="hidden sm:inline">Друк / PDF</span>
           </button>
 
@@ -474,14 +474,14 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
       </div>
 
       {/* Manual Dimensions Input Section (Цифрами вручну) */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
+      <div className="bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-5 space-y-4 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800/80 pb-3">
           <div>
-            <label className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-2">
-              <Ruler className="w-4 h-4 text-cyan-400" />
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
+              <Ruler className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
               <span>{t.dimensionsTitle} — Ручне введення цифрами</span>
             </label>
-            <p className="text-[11px] text-slate-400 mt-0.5">
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
               Вводьте точні цифри з лазерного дальноміра або використовуйте кнопки швидкого кроку (±0.1м / ±0.5м)
             </p>
           </div>
@@ -499,8 +499,8 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
             }}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition border ${
               isManualAreaPerimeter
-                ? 'bg-amber-950/60 border-amber-600 text-amber-300'
-                : 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white'
+                ? 'bg-amber-50 border-amber-400 text-amber-800 dark:bg-amber-950/60 dark:border-amber-600 dark:text-amber-300'
+                : 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:text-white'
             }`}
           >
             <SlidersHorizontal className="w-3.5 h-3.5" />
@@ -735,29 +735,29 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
 
         {/* Summary geometric figures */}
         <div className="grid grid-cols-4 gap-2 pt-2 text-center text-xs">
-          <div className="bg-slate-950 p-2 rounded-xl border border-slate-800">
-            <span className="text-[10px] text-slate-400 block">{t.area}</span>
-            <strong className="text-sm font-mono text-cyan-400">{effectiveArea} м²</strong>
+          <div className="bg-slate-50 dark:bg-slate-950 p-2 rounded-xl border border-slate-200 dark:border-slate-800">
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 block">{t.area}</span>
+            <strong className="text-sm font-mono text-cyan-600 dark:text-cyan-400">{effectiveArea} м²</strong>
           </div>
-          <div className="bg-slate-950 p-2 rounded-xl border border-slate-800">
-            <span className="text-[10px] text-slate-400 block">{t.perimeter}</span>
-            <strong className="text-sm font-mono text-cyan-400">{effectivePerimeter} м</strong>
+          <div className="bg-slate-50 dark:bg-slate-950 p-2 rounded-xl border border-slate-200 dark:border-slate-800">
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 block">{t.perimeter}</span>
+            <strong className="text-sm font-mono text-cyan-600 dark:text-cyan-400">{effectivePerimeter} м</strong>
           </div>
-          <div className="bg-slate-950 p-2 rounded-xl border border-slate-800">
-            <span className="text-[10px] text-slate-400 block">{t.corners}</span>
-            <strong className="text-sm font-mono text-white">{effectiveCorners}</strong>
+          <div className="bg-slate-50 dark:bg-slate-950 p-2 rounded-xl border border-slate-200 dark:border-slate-800">
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 block">{t.corners}</span>
+            <strong className="text-sm font-mono text-slate-900 dark:text-white">{effectiveCorners}</strong>
           </div>
-          <div className="bg-slate-950 p-2 rounded-xl border border-slate-800">
-            <span className="text-[10px] text-slate-400 block">{t.height}</span>
-            <strong className="text-sm font-mono text-white">{height} м</strong>
+          <div className="bg-slate-50 dark:bg-slate-950 p-2 rounded-xl border border-slate-200 dark:border-slate-800">
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 block">{t.height}</span>
+            <strong className="text-sm font-mono text-slate-900 dark:text-white">{height} м</strong>
           </div>
         </div>
       </div>
 
       {/* Material & Complexity */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 space-y-4">
-        <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-          <Sparkles className="w-4 h-4 text-cyan-400" />
+      <div className="bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 space-y-4 shadow-sm">
+        <label className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-400 flex items-center gap-1.5">
+          <Sparkles className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
           <span>{t.materialType} та {t.complexity}</span>
         </label>
 
@@ -776,8 +776,8 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
               onClick={() => setMaterialType(mat.id as MaterialType)}
               className={`p-2.5 rounded-xl border text-left transition ${
                 materialType === mat.id
-                  ? 'border-cyan-500 bg-cyan-950/40 text-white shadow-sm ring-1 ring-cyan-500'
-                  : 'border-slate-800 bg-slate-950 text-slate-300 hover:border-slate-700'
+                  ? 'border-cyan-500 bg-cyan-50 text-cyan-900 shadow-sm ring-1 ring-cyan-500 dark:bg-cyan-950/40 dark:text-white'
+                  : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300 dark:hover:border-slate-700'
               }`}
             >
               <span className="text-xs font-semibold block">{mat.label}</span>
@@ -786,7 +786,7 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
         </div>
 
         <div>
-          <span className="text-xs text-slate-400 block mb-2">{t.complexity}:</span>
+          <span className="text-xs text-slate-600 dark:text-slate-400 block mb-2 font-medium">{t.complexity}:</span>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             {[
               { id: 'straight', label: t.complexityStraight },
@@ -799,8 +799,8 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
                 onClick={() => setComplexity(c.id as CeilingComplexity)}
                 className={`p-2.5 rounded-xl border text-left transition ${
                   complexity === c.id
-                    ? 'border-amber-500 bg-amber-950/40 text-amber-200 ring-1 ring-amber-500'
-                    : 'border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700'
+                    ? 'border-amber-500 bg-amber-50 text-amber-900 ring-1 ring-amber-500 dark:bg-amber-950/40 dark:text-amber-200'
+                    : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400 dark:hover:border-slate-700'
                 }`}
               >
                 <span className="text-xs font-bold block">{c.label}</span>
@@ -810,11 +810,11 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
         </div>
 
         <div>
-          <span className="text-xs text-slate-400 block mb-2">{t.profileSystem}:</span>
+          <span className="text-xs text-slate-600 dark:text-slate-400 block mb-2 font-medium">{t.profileSystem}:</span>
           <select
             value={profileType}
             onChange={(e) => setProfileType(e.target.value as ProfileType)}
-            className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
+            className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-cyan-500"
           >
             <option value="standard_alu">{t.profileStandardAlu}</option>
             <option value="pvc">{t.profilePVC}</option>
@@ -826,9 +826,9 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
       </div>
 
       {/* Options & Lighting with NumericInputs */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 space-y-3">
-        <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-          <Lightbulb className="w-4 h-4 text-amber-400" />
+      <div className="bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 space-y-3 shadow-sm">
+        <label className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-400 flex items-center gap-1.5">
+          <Lightbulb className="w-4 h-4 text-amber-500 dark:text-amber-400" />
           <span>{t.lightingAndOptions} — Ручне введення цифрами</span>
         </label>
 
@@ -919,9 +919,9 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
       </div>
 
       {/* Comments with quick tags */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 space-y-3">
-        <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-          <FileText className="w-4 h-4 text-cyan-400" />
+      <div className="bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 space-y-3 shadow-sm">
+        <label className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-400 flex items-center gap-1.5">
+          <FileText className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
           <span>{t.commentsTitle}</span>
         </label>
 
@@ -931,7 +931,7 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
               key={tag}
               type="button"
               onClick={() => handleAddCommentTag(tag)}
-              className="text-[11px] px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition"
+              className="text-[11px] px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 dark:border-slate-700 transition"
             >
               + {tag}
             </button>
@@ -943,12 +943,12 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
           value={comments}
           onChange={(e) => setComments(e.target.value)}
           placeholder={t.commentsPlaceholder}
-          className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-cyan-500"
+          className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-cyan-500"
         />
       </div>
 
       {/* Photos */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
+      <div className="bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm">
         <PhotoUploader photos={photos} onChange={setPhotos} title={t.photosTitle} />
       </div>
 
