@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   Printer, 
@@ -15,6 +15,49 @@ import {
 } from '../utils/calculator';
 import { AppStorage } from '../db/storage';
 import { Translations, Locale } from '../i18n/translations';
+
+export const getMasterInitials = (masterName?: string, companyName?: string): string => {
+  const cleanName = (masterName || '').trim();
+  if (cleanName) {
+    const parts = cleanName.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    if (parts.length === 1 && parts[0].length >= 2) {
+      return parts[0].slice(0, 2).toUpperCase();
+    }
+    if (parts.length === 1 && parts[0].length === 1) {
+      return parts[0][0].toUpperCase();
+    }
+  }
+  const cleanCompany = (companyName || '').trim();
+  if (cleanCompany) {
+    const parts = cleanCompany.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return cleanCompany.slice(0, 2).toUpperCase();
+  }
+  return 'СП';
+};
+
+export const generateEstimateDocNumber = (
+  date: Date = new Date(),
+  masterName?: string,
+  companyName?: string
+): string => {
+  const yy = String(date.getFullYear()).slice(-2);
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  const dateStr = `${yy}${mm}${dd}`;
+
+  const hh = String(date.getHours()).padStart(2, '0');
+  const min = String(date.getMinutes()).padStart(2, '0');
+  const timeStr = `${hh}${min}`;
+
+  const initials = getMasterInitials(masterName, companyName).replace(/[^a-zA-Z0-9а-яА-ЯіІїЇєЄ]/g, '') || 'СП';
+  return `${dateStr}-${initials}-${timeStr}`;
+};
 
 interface PrintEstimateModalProps {
   isOpen: boolean;
@@ -58,6 +101,11 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
     measurement?.id || allRooms[0]?.id || ''
   );
 
+  // Generate document number according to format: [РікМісяцьДень]-[ініціали Майстра]-[ГодинаХвилина], e.g. "261022-АО-1941"
+  const documentNumber = useMemo(() => {
+    return generateEstimateDocNumber(new Date(), profile?.masterName, profile?.companyName);
+  }, [profile?.masterName, profile?.companyName, isOpen]);
+
   if (!isOpen) return null;
 
   const targetRooms = printScope === 'single'
@@ -88,19 +136,21 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
   };
 
   const handlePrint = () => {
+    const originalTitle = document.title;
+    document.title = `Кошторис_${documentNumber}`;
     document.documentElement.classList.add('is-printing-estimate');
     window.print();
     setTimeout(() => {
       document.documentElement.classList.remove('is-printing-estimate');
-    }, 1200);
+      document.title = originalTitle;
+    }, 1500);
   };
 
   const handleDownloadHtml = () => {
     const sheetEl = document.getElementById('print-sheet');
     if (!sheetEl) return;
 
-    const objName = parentObject?.address || client?.name || 'Кошторис';
-    const fileName = `Кошторис_${objName.replace(/[^a-zA-Z0-9а-яА-ЯіІїЇєЄ]/g, '_')}_${new Date().toISOString().slice(0, 10)}.html`;
+    const fileName = `Кошторис_${documentNumber}.html`;
 
     const htmlContent = `<!DOCTYPE html>
 <html lang="uk">
@@ -165,9 +215,14 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
               <Printer className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white leading-tight">
-                Друк кошторису (PDF)
-              </h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-bold text-slate-900 dark:text-white leading-tight">
+                  Друк кошторису (PDF)
+                </h2>
+                <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-cyan-100 text-cyan-800 dark:bg-cyan-950 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800">
+                  № {documentNumber}
+                </span>
+              </div>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 {parentObject?.address || client?.name || 'Документ замовлення'}
               </p>
@@ -306,7 +361,7 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
                     Кошторис-Договір
                   </h2>
                   <p className="text-xs text-black mt-1">
-                    Документ: <strong>№ {parentObject?.id?.replace(/[^0-9]/g, '').slice(-5) || '101'}</strong>
+                    Документ: <strong>№ {documentNumber}</strong>
                   </p>
                   <p className="text-xs text-black">
                     Дата: <strong>{new Date().toLocaleDateString(locale === 'en' ? 'en-US' : 'uk-UA')}</strong>
