@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Printer, 
   X, 
@@ -152,13 +153,13 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
     profile?.email?.trim()
   );
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/75 backdrop-blur-sm animate-fadeIn overflow-y-auto">
+  return createPortal(
+    <div id="print-modal-portal" className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/75 backdrop-blur-sm animate-fadeIn overflow-y-auto">
       {/* Modal dialog wrapper */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 w-full max-w-4xl max-h-[94vh] rounded-2xl flex flex-col shadow-2xl overflow-hidden my-auto">
         
         {/* Modal Top Bar (Screen only, hidden on print) */}
-        <div className="px-4 sm:px-6 py-3.5 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 bg-slate-50 dark:bg-slate-950/80 shrink-0">
+        <div className="no-print px-4 sm:px-6 py-3.5 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 bg-slate-50 dark:bg-slate-950/80 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-cyan-600 text-white shadow-xs">
               <Printer className="w-5 h-5" />
@@ -232,7 +233,7 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
 
         {/* Room selector dropdown if single mode */}
         {printScope === 'single' && allRooms.length > 1 && (
-          <div className="px-6 py-2 bg-slate-100/70 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3 text-xs">
+          <div className="no-print px-6 py-2 bg-slate-100/70 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3 text-xs">
             <span className="font-semibold text-slate-600 dark:text-slate-400">Оберіть кімнату:</span>
             <select
               value={selectedSingleId}
@@ -681,6 +682,7 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

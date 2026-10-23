@@ -390,12 +390,18 @@ html:not(.dark) .bg-black\/85 {
     font-size: 11px !important;
   }
 
+  /* CRITICAL: Completely hide #root so NO background screens, no blueprints, no forms are printed */
+  #root {
+    display: none !important;
+  }
+
   /* Hide regular UI elements */
   header, nav, footer, .no-print, [aria-hidden="true"], button {
     display: none !important;
   }
 
   /* Unset modal position: fixed & overflow so they do not clip or break pages */
+  #print-modal-portal,
   .fixed.inset-0 {
     position: static !important;
     background: transparent !important;

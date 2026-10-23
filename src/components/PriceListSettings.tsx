@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Settings, 
   DollarSign, 
@@ -25,12 +25,20 @@ import {
   Layers,
   Wrench,
   Lightbulb,
-  CreditCard
+  CreditCard,
+  Lock,
+  Unlock,
+  Fingerprint,
+  KeyRound,
+  ShieldCheck,
+  Clock
 } from 'lucide-react';
 import { MasterPriceList, MasterProfile, CustomPriceItem, MaterialType, ProfileType } from '../types/database';
 import { AppStorage } from '../db/storage';
 import { Translations, Locale } from '../i18n/translations';
 import { ThemeMode } from '../hooks/useTheme';
+import { SecurityStorage, SecuritySettings, isBiometricsAvailable, registerAndVerifyBiometrics } from '../utils/security';
+import { PinSetupModal } from './PinSetupModal';
 
 interface PriceListSettingsProps {
   priceList: MasterPriceList;
@@ -44,6 +52,7 @@ interface PriceListSettingsProps {
   onSavePriceList: (priceList: MasterPriceList) => void;
   onSaveMasterProfile: (profile: MasterProfile) => void;
   onResetData: () => void;
+  onLockApp?: () => void;
 }
 
 export const PriceListSettings: React.FC<PriceListSettingsProps> = ({
@@ -58,6 +67,7 @@ export const PriceListSettings: React.FC<PriceListSettingsProps> = ({
   onSavePriceList,
   onResetData,
   onSaveMasterProfile,
+  onLockApp,
 }) => {
   const [prices, setPrices] = useState<MasterPriceList>(priceList);
   const [profile, setProfile] = useState<MasterProfile>(initialProfile || AppStorage.getMasterProfile());
@@ -66,6 +76,54 @@ export const PriceListSettings: React.FC<PriceListSettingsProps> = ({
   const [profileSaveSuccess, setProfileSaveSuccess] = useState(false);
   const [importStatus, setImportStatus] = useState<string | null>(null);
   const [copiedUrl, setCopiedUrl] = useState(false);
+
+  // Security & App Lock state
+  const [security, setSecurity] = useState<SecuritySettings>(SecurityStorage.getSettings());
+  const [isBiometricSupported, setIsBiometricSupported] = useState<boolean>(false);
+  const [isPinModalOpen, setIsPinModalOpen] = useState<boolean>(false);
+  const [securityMessage, setSecurityMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    isBiometricsAvailable().then((supported) => {
+      setIsBiometricSupported(supported);
+    });
+  }, []);
+
+  const handleTogglePinSecurity = () => {
+    if (!security.enabled) {
+      // Opening setup modal if no PIN set yet
+      setIsPinModalOpen(true);
+    } else {
+      // Disable security
+      SecurityStorage.disableSecurity();
+      setSecurity(SecurityStorage.getSettings());
+      setSecurityMessage('Захист паролем вимкнено');
+      setTimeout(() => setSecurityMessage(null), 3000);
+    }
+  };
+
+  const handleToggleBiometrics = async () => {
+    if (!security.biometricsEnabled) {
+      const ok = await registerAndVerifyBiometrics();
+      if (ok) {
+        const updated = SecurityStorage.saveSettings({ biometricsEnabled: true });
+        setSecurity(updated);
+        setSecurityMessage('Біометричний вхід активовано');
+      } else {
+        setSecurityMessage('Не вдалося активувати біометрію на цьому пристрої');
+      }
+    } else {
+      const updated = SecurityStorage.saveSettings({ biometricsEnabled: false });
+      setSecurity(updated);
+      setSecurityMessage('Біометричний вхід вимкнено');
+    }
+    setTimeout(() => setSecurityMessage(null), 3500);
+  };
+
+  const handleAutoLockChange = (minutes: number) => {
+    const updated = SecurityStorage.saveSettings({ autoLockMinutes: minutes });
+    setSecurity(updated);
+  };
 
   // New custom item form state
   const [newItemCategory, setNewItemCategory] = useState<'canvas' | 'profile' | 'work' | 'option'>('canvas');
@@ -399,6 +457,153 @@ export const PriceListSettings: React.FC<PriceListSettingsProps> = ({
             </div>
           </div>
         </div>
+      </div>
+
+      {/* 2.5 SECURITY & APP LOCK (PIN / BIOMETRICS) */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-4 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className={`p-2 rounded-xl ${security.enabled ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                  Безпека та захист додатку
+                </h3>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                  security.enabled 
+                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300' 
+                    : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                }`}>
+                  {security.enabled ? 'Захищено' : 'Вимкнено'}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                Захист бази замовлень, контактів клієнтів та кошторисів PIN-кодом або біометрією
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {security.enabled && onLockApp && (
+              <button
+                type="button"
+                onClick={onLockApp}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold transition"
+                title="Заблокувати зараз"
+              >
+                <Lock className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
+                <span>Заблокувати зараз</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={handleTogglePinSecurity}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition shadow-xs ${
+                security.enabled
+                  ? 'bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-950 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900'
+                  : 'bg-cyan-600 hover:bg-cyan-500 text-white'
+              }`}
+            >
+              {security.enabled ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
+              <span>{security.enabled ? 'Вимкнути захист' : 'Увімкнути захист'}</span>
+            </button>
+          </div>
+        </div>
+
+        {securityMessage && (
+          <div className="p-2.5 rounded-xl bg-cyan-50 dark:bg-cyan-950/60 border border-cyan-200 dark:border-cyan-800 text-cyan-800 dark:text-cyan-300 text-xs font-medium animate-fadeIn">
+            {securityMessage}
+          </div>
+        )}
+
+        {security.enabled ? (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-1">
+            {/* PIN Code settings */}
+            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                  <KeyRound className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
+                  <span>Майстер PIN-код</span>
+                </span>
+                <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">Активний (••••)</span>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                4-значний пароль для входу в додаток
+              </p>
+              <button
+                type="button"
+                onClick={() => setIsPinModalOpen(true)}
+                className="w-full mt-1 py-1.5 px-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition shadow-xs"
+              >
+                Змінити PIN-код
+              </button>
+            </div>
+
+            {/* Biometric login */}
+            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                  <Fingerprint className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
+                  <span>Біометрія (Face ID / Відбиток)</span>
+                </span>
+                <span className={`text-[10px] font-bold ${
+                  security.biometricsEnabled ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'
+                }`}>
+                  {security.biometricsEnabled ? 'Увімкнено' : 'Вимкнено'}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                {isBiometricSupported 
+                  ? 'Миттєве розблокування пальцем або обличчям' 
+                  : 'Біометрія доступна на смартфонах з Touch ID / сканером відбитка'}
+              </p>
+              <button
+                type="button"
+                onClick={handleToggleBiometrics}
+                className={`w-full mt-1 py-1.5 px-2.5 rounded-lg border text-xs font-semibold transition shadow-xs ${
+                  security.biometricsEnabled
+                    ? 'bg-rose-50 border-rose-200 text-rose-600 dark:bg-rose-950/30 dark:border-rose-900/50 dark:text-rose-400'
+                    : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
+              >
+                {security.biometricsEnabled ? 'Вимкнути біометрію' : 'Увімкнути біометрію'}
+              </button>
+            </div>
+
+            {/* Auto-lock timer */}
+            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
+                  <span>Автоблокування</span>
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                Коли блокувати додаток при згортанні:
+              </p>
+              <select
+                value={security.autoLockMinutes}
+                onChange={(e) => handleAutoLockChange(Number(e.target.value))}
+                className="w-full mt-1 py-1.5 px-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs font-semibold outline-none focus:ring-1 focus:ring-cyan-500"
+              >
+                <option value={0}>Відразу при згортанні (0 хв)</option>
+                <option value={1}>Через 1 хвилину</option>
+                <option value={5}>Через 5 хвилин</option>
+                <option value={15}>Через 15 хвилин</option>
+              </select>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-slate-50 dark:bg-slate-950 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl p-3.5 text-xs text-slate-600 dark:text-slate-400 flex items-center gap-3">
+            <Lock className="w-5 h-5 text-slate-400 shrink-0" />
+            <span>
+              Увімкніть захист, щоб ніхто сторонній не мав доступу до списку клієнтів, об'єктів та фінансових розрахунків на вашому смартфоні.
+            </span>
+          </div>
+        )}
       </div>
 
       {/* 3. PRICE LIST SECTIONS WITH FULL CRUD */}
@@ -1078,6 +1283,19 @@ export const PriceListSettings: React.FC<PriceListSettingsProps> = ({
           {t.resetToDefaults}
         </button>
       </div>
+
+      {/* PIN Setup Modal */}
+      {isPinModalOpen && (
+        <PinSetupModal
+          isOpen={isPinModalOpen}
+          onClose={() => setIsPinModalOpen(false)}
+          onSuccess={() => {
+            setSecurity(SecurityStorage.getSettings());
+            setSecurityMessage('PIN-код успішно встановлено та активовано!');
+            setTimeout(() => setSecurityMessage(null), 3000);
+          }}
+        />
+      )}
     </div>
   );
 };

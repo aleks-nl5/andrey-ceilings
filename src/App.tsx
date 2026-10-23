@@ -33,6 +33,8 @@ import { PWAInstallBanner } from './components/PWAInstallBanner';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { NewMeasurementModal } from './components/NewMeasurementModal';
 import { PrintEstimateModal } from './components/PrintEstimateModal';
+import { AppLockScreen } from './components/AppLockScreen';
+import { SecurityStorage } from './utils/security';
 import { usePWAInstall } from './hooks/usePWAInstall';
 import { useTheme } from './hooks/useTheme';
 import { Locale, TRANSLATIONS, getInitialLocale, saveLocale } from './i18n/translations';
@@ -60,16 +62,113 @@ export default function App() {
   const [currentEditingMeasurement, setCurrentEditingMeasurement] = useState<Partial<RoomMeasurement> | null>(null);
   const [targetObjectId, setTargetObjectId] = useState<string>('');
 
+  // Object drill-down selection state
+  const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
+
   // New Measurement object selection/creation modal
   const [isNewMeasurementModalOpen, setIsNewMeasurementModalOpen] = useState<boolean>(false);
 
   // Standalone Print/PDF modal
   const [printMeasurement, setPrintMeasurement] = useState<RoomMeasurement | null>(null);
 
+  // App Lock & Security state
+  const [isLocked, setIsLocked] = useState<boolean>(() => SecurityStorage.getSettings().enabled);
+
   const { isInstallable, install } = usePWAInstall();
+
+  // Navigation state ref to always access latest state in popstate listener without stale closures
+  const navStateRef = React.useRef({
+    activeTab,
+    selectedObjectId,
+    isEditingMeasurement,
+    isNewMeasurementModalOpen,
+    printMeasurement: !!printMeasurement,
+  });
+
+  navStateRef.current = {
+    activeTab,
+    selectedObjectId,
+    isEditingMeasurement,
+    isNewMeasurementModalOpen,
+    printMeasurement: !!printMeasurement,
+  };
 
   useEffect(() => {
     refreshData();
+  }, []);
+
+  // 1. Mobile Hardware / Gesture Back Button & History Management
+  useEffect(() => {
+    // Ensure initial root state is set
+    if (!window.history.state) {
+      window.history.replaceState({ type: 'root', tab: 'dashboard' }, '');
+    }
+
+    const handlePopState = () => {
+      const state = navStateRef.current;
+
+      // Hierarchical back resolution:
+      // 1. Print modal
+      if (state.printMeasurement) {
+        setPrintMeasurement(null);
+        return;
+      }
+
+      // 2. New measurement modal
+      if (state.isNewMeasurementModalOpen) {
+        setIsNewMeasurementModalOpen(false);
+        return;
+      }
+
+      // 3. Measurement Editor
+      if (state.isEditingMeasurement) {
+        setIsEditingMeasurement(false);
+        setCurrentEditingMeasurement(null);
+        return;
+      }
+
+      // 4. Object detail inside Objects tab
+      if (state.selectedObjectId) {
+        setSelectedObjectId(null);
+        return;
+      }
+
+      // 5. Secondary tabs -> return to Dashboard (parent)
+      if (state.activeTab !== 'dashboard') {
+        setActiveTab('dashboard');
+        return;
+      }
+
+      // 6. Already at root Dashboard -> standard exit/back
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // 2. Background Auto-lock Listener (Locks app when minimized or phone screen turns off)
+  useEffect(() => {
+    let backgroundTime: number | null = null;
+
+    const handleVisibilityChange = () => {
+      const settings = SecurityStorage.getSettings();
+      if (!settings.enabled) return;
+
+      if (document.visibilityState === 'hidden') {
+        backgroundTime = Date.now();
+      } else if (document.visibilityState === 'visible') {
+        if (backgroundTime !== null) {
+          const elapsedMinutes = (Date.now() - backgroundTime) / (1000 * 60);
+          if (elapsedMinutes >= (settings.autoLockMinutes || 0)) {
+            setIsLocked(true);
+          }
+          backgroundTime = null;
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
 
   const refreshData = () => {
@@ -83,6 +182,73 @@ export default function App() {
   const handleLanguageChange = (newLocale: Locale) => {
     setLocale(newLocale);
     saveLocale(newLocale);
+  };
+
+  // Navigation helpers that maintain browser history stack for hardware Back button
+  const navigateToTab = (tab: typeof activeTab) => {
+    if (tab === activeTab) return;
+    window.history.pushState({ type: 'tab', tab }, '');
+    setActiveTab(tab);
+    if (tab !== 'measurements') {
+      setIsEditingMeasurement(false);
+    }
+  };
+
+  const handleSelectObjectDetail = (id: string | null) => {
+    if (id) {
+      window.history.pushState({ type: 'object', id }, '');
+      setSelectedObjectId(id);
+      setTargetObjectId(id);
+    } else {
+      if (navStateRef.current.selectedObjectId) {
+        window.history.back();
+      } else {
+        setSelectedObjectId(null);
+      }
+    }
+  };
+
+  const handleStartNewMeasurement = (objectId?: string) => {
+    if (objectId) {
+      setTargetObjectId(objectId);
+      setCurrentEditingMeasurement(null);
+      window.history.pushState({ type: 'editor' }, '');
+      setIsEditingMeasurement(true);
+      setActiveTab('measurements');
+    } else {
+      window.history.pushState({ type: 'modal' }, '');
+      setIsNewMeasurementModalOpen(true);
+    }
+  };
+
+  const handleCloseNewMeasurementModal = () => {
+    if (navStateRef.current.isNewMeasurementModalOpen) {
+      window.history.back();
+    } else {
+      setIsNewMeasurementModalOpen(false);
+    }
+  };
+
+  const handleOpenPrintMeasurement = (meas: RoomMeasurement | null) => {
+    if (meas) {
+      window.history.pushState({ type: 'print' }, '');
+      setPrintMeasurement(meas);
+    } else {
+      if (navStateRef.current.printMeasurement) {
+        window.history.back();
+      } else {
+        setPrintMeasurement(null);
+      }
+    }
+  };
+
+  const handleExitMeasurementEditor = () => {
+    if (navStateRef.current.isEditingMeasurement) {
+      window.history.back();
+    } else {
+      setIsEditingMeasurement(false);
+      setCurrentEditingMeasurement(null);
+    }
   };
 
   // Client handlers
@@ -105,18 +271,6 @@ export default function App() {
   const handleDeleteObject = (id: string) => {
     AppStorage.deleteObject(id);
     refreshData();
-  };
-
-  // Measurement handlers
-  const handleStartNewMeasurement = (objectId?: string) => {
-    if (objectId) {
-      setTargetObjectId(objectId);
-      setCurrentEditingMeasurement(null);
-      setIsEditingMeasurement(true);
-      setActiveTab('measurements');
-    } else {
-      setIsNewMeasurementModalOpen(true);
-    }
   };
 
   const handleCreateNewObjectAndMeasure = (data: {
@@ -154,6 +308,7 @@ export default function App() {
     refreshData();
     setTargetObjectId(newObjectId);
     setCurrentEditingMeasurement(null);
+    window.history.pushState({ type: 'editor' }, '');
     setIsEditingMeasurement(true);
     setActiveTab('measurements');
   };
@@ -161,6 +316,7 @@ export default function App() {
   const handleSelectObjectFromModal = (objId: string) => {
     setTargetObjectId(objId);
     setCurrentEditingMeasurement(null);
+    window.history.pushState({ type: 'editor' }, '');
     setIsEditingMeasurement(true);
     setActiveTab('measurements');
   };
@@ -168,14 +324,14 @@ export default function App() {
   const handleEditMeasurement = (meas: RoomMeasurement) => {
     setTargetObjectId(meas.objectId);
     setCurrentEditingMeasurement(meas);
+    window.history.pushState({ type: 'editor' }, '');
     setIsEditingMeasurement(true);
     setActiveTab('measurements');
   };
 
   const handleSaveMeasurement = (measurement: RoomMeasurement) => {
     AppStorage.saveMeasurement(measurement);
-    setIsEditingMeasurement(false);
-    setCurrentEditingMeasurement(null);
+    handleExitMeasurementEditor();
     refreshData();
   };
 
@@ -246,6 +402,14 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-cyan-500 selection:text-white">
+      {/* App Lock Screen (PIN & Biometrics) */}
+      {isLocked && (
+        <AppLockScreen
+          onUnlock={() => setIsLocked(false)}
+          companyName={masterProfile.companyName || 'СтеляПро'}
+        />
+      )}
+
       {/* PWA In-App Install Banner */}
       <PWAInstallBanner />
 
@@ -321,15 +485,10 @@ export default function App() {
             currencySymbol={currencySymbol}
             t={t}
             locale={locale}
-            onNavigateTab={(tab) => {
-              setActiveTab(tab);
-              if (tab !== 'measurements') {
-                setIsEditingMeasurement(false);
-              }
-            }}
+            onNavigateTab={navigateToTab}
             onStartNewMeasurement={handleStartNewMeasurement}
             onSelectObject={(objId) => {
-              setTargetObjectId(objId);
+              handleSelectObjectDetail(objId);
               setActiveTab('objects');
             }}
           />
@@ -341,6 +500,8 @@ export default function App() {
             objects={objects}
             measurements={measurements}
             masterProfile={masterProfile}
+            selectedObjectId={selectedObjectId}
+            onSelectObjectId={handleSelectObjectDetail}
             t={t}
             locale={locale}
             currencySymbol={currencySymbol}
@@ -351,7 +512,7 @@ export default function App() {
             onSelectObjectForMeasurement={handleStartNewMeasurement}
             onEditMeasurement={handleEditMeasurement}
             onDeleteMeasurement={handleDeleteMeasurement}
-            onOpenQuickCalculate={() => setActiveTab('calculator')}
+            onOpenQuickCalculate={() => navigateToTab('calculator')}
           />
         )}
 
@@ -369,10 +530,7 @@ export default function App() {
                 locale={locale}
                 currencySymbol={currencySymbol}
                 onSave={handleSaveMeasurement}
-                onCancel={() => {
-                  setIsEditingMeasurement(false);
-                  setCurrentEditingMeasurement(null);
-                }}
+                onCancel={handleExitMeasurementEditor}
               />
             ) : (
               <div className="space-y-6">
@@ -473,7 +631,7 @@ export default function App() {
                             </button>
                             <button
                               type="button"
-                              onClick={() => setPrintMeasurement(meas)}
+                              onClick={() => handleOpenPrintMeasurement(meas)}
                               className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition"
                               title="Друк / PDF"
                             >
@@ -527,6 +685,7 @@ export default function App() {
             onSavePriceList={handleSavePriceList}
             onSaveMasterProfile={handleSaveMasterProfile}
             onResetData={handleResetData}
+            onLockApp={() => setIsLocked(true)}
           />
         )}
       </main>
@@ -547,12 +706,7 @@ export default function App() {
               <button
                 key={item.id}
                 type="button"
-                onClick={() => {
-                  setActiveTab(item.id as any);
-                  if (item.id !== 'measurements') {
-                    setIsEditingMeasurement(false);
-                  }
-                }}
+                onClick={() => navigateToTab(item.id as any)}
                 className={`flex flex-col items-center justify-center py-1.5 px-1 rounded-xl transition ${
                   isActive
                     ? 'text-cyan-700 dark:text-cyan-400 font-bold bg-cyan-100 dark:bg-cyan-950/50 shadow-sm'
@@ -571,7 +725,7 @@ export default function App() {
       {isNewMeasurementModalOpen && (
         <NewMeasurementModal
           isOpen={isNewMeasurementModalOpen}
-          onClose={() => setIsNewMeasurementModalOpen(false)}
+          onClose={handleCloseNewMeasurementModal}
           objects={objects}
           clients={clients}
           onSelectObject={handleSelectObjectFromModal}
@@ -585,7 +739,7 @@ export default function App() {
       {printMeasurement && (
         <PrintEstimateModal
           isOpen={!!printMeasurement}
-          onClose={() => setPrintMeasurement(null)}
+          onClose={() => handleOpenPrintMeasurement(null)}
           measurement={printMeasurement}
           parentObject={objects.find((o) => o.id === printMeasurement.objectId)}
           client={clients.find((c) => c.id === objects.find((o) => o.id === printMeasurement.objectId)?.clientId)}
