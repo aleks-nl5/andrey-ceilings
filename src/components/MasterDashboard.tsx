@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { ObjectProject, Client, RoomMeasurement } from '../types/database';
 import { Translations, Locale } from '../i18n/translations';
+import { CurrencyRatesWidget } from './CurrencyRatesWidget';
 
 interface MasterDashboardProps {
   objects: ObjectProject[];
@@ -320,6 +321,9 @@ export const MasterDashboard: React.FC<MasterDashboardProps> = ({
           </div>
         </div>
       </div>
+
+      {/* 4. CURRENCY RATES (monobank API with >= 30 min cache) */}
+      <CurrencyRatesWidget />
     </div>
   );
 };
