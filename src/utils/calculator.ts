@@ -126,27 +126,46 @@ export function calculateRoomGeometry(params: {
 }
 
 /**
- * Модуль калькулятора стоимости натяжного потолка
+ * Модуль калькулятора вартості натяжної стелі
  */
 export function calculateCeilingCost(params: {
   area: number;
   perimeter: number;
-  materialType: MaterialType;
+  materialType: MaterialType | string;
   complexity: CeilingComplexity;
-  profileType?: ProfileType;
+  profileType?: ProfileType | string;
   options: Partial<RoomOptions>;
+  customOptions?: { id: string; name: string; unit: string; price: number; quantity: number }[];
   priceList?: MasterPriceList;
 }): CostBreakdown {
   const prices = params.priceList || DEFAULT_PRICE_LIST;
-  const { area, perimeter, materialType, complexity, options } = params;
+  const { area, perimeter, materialType, complexity, options, customOptions } = params;
   const profileType = params.profileType || 'standard_alu';
 
-  // 1. Полотно
-  const baseCanvasRate = prices.canvasPrices[materialType] ?? prices.canvasPrices.pvc_matte;
+  // 1. Полотно (перевірка на власне полотно або стандартне)
+  let baseCanvasRate: number;
+  const customCanvas = prices.customItems?.find(
+    (i) => i.category === 'canvas' && (i.id === materialType || i.name === materialType)
+  );
+
+  if (customCanvas) {
+    baseCanvasRate = customCanvas.price;
+  } else {
+    baseCanvasRate = (prices.canvasPrices as any)[materialType] ?? prices.canvasPrices.pvc_matte;
+  }
   const canvasCost = Math.round(area * baseCanvasRate);
 
-  // 2. Базовий профіль
-  const profileRate = prices.profilePrices[profileType] ?? prices.profilePrices.standard_alu;
+  // 2. Базовий профіль (перевірка на власний профіль або стандартний)
+  let profileRate: number;
+  const customProfile = prices.customItems?.find(
+    (i) => i.category === 'profile' && (i.id === profileType || i.name === profileType)
+  );
+
+  if (customProfile) {
+    profileRate = customProfile.price;
+  } else {
+    profileRate = (prices.profilePrices as any)[profileType] ?? prices.profilePrices.standard_alu;
+  }
   const profileCost = Math.round(perimeter * profileRate);
 
   // 3. Складність
@@ -198,6 +217,15 @@ export function calculateCeilingCost(params: {
     optionsCost += options.hardWallMeters * prices.hardWallPerMeter;
   }
 
+  // Власні додані роботи та опції
+  if (customOptions && customOptions.length > 0) {
+    customOptions.forEach((opt) => {
+      if (opt.price && opt.quantity) {
+        optionsCost += opt.price * opt.quantity;
+      }
+    });
+  }
+
   optionsCost = Math.round(optionsCost);
   const totalCost = canvasCost + profileCost + complexityCost + optionsCost;
 
@@ -210,7 +238,13 @@ export function calculateCeilingCost(params: {
   };
 }
 
-export function getMaterialLabel(material: MaterialType, lang: 'uk' | 'ru' | 'en' = 'uk'): string {
+export function getMaterialLabel(material: MaterialType | string, lang: 'uk' | 'ru' | 'en' = 'uk', priceList?: MasterPriceList): string {
+  // Check if it's a custom canvas
+  if (priceList?.customItems) {
+    const custom = priceList.customItems.find((i) => i.category === 'canvas' && (i.id === material || i.name === material));
+    if (custom) return custom.name;
+  }
+
   if (lang === 'en') {
     switch (material) {
       case 'pvc_matte': return 'PVC Matte (MSD)';
@@ -219,7 +253,7 @@ export function getMaterialLabel(material: MaterialType, lang: 'uk' | 'ru' | 'en
       case 'fabric': return 'Seamless Fabric (Descor)';
       case 'fireproof_km2': return 'Fire-Safe Teqtum KM2';
       case 'acoustic': return 'Acoustic Perforated';
-      default: return 'PVC';
+      default: return String(material);
     }
   }
 
@@ -231,7 +265,7 @@ export function getMaterialLabel(material: MaterialType, lang: 'uk' | 'ru' | 'en
       case 'fabric': return 'Тканевый бесшовный (Descor)';
       case 'fireproof_km2': return 'Негорючий Teqtum KM2';
       case 'acoustic': return 'Акустический перфорированный';
-      default: return 'ПВХ';
+      default: return String(material);
     }
   }
 
@@ -243,7 +277,7 @@ export function getMaterialLabel(material: MaterialType, lang: 'uk' | 'ru' | 'en
     case 'fabric': return 'Тканинний безшовний (Descor)';
     case 'fireproof_km2': return 'Негорючий Teqtum KM2';
     case 'acoustic': return 'Акустичний перфорований';
-    default: return 'ПВХ';
+    default: return String(material);
   }
 }
 
@@ -272,7 +306,13 @@ export function getComplexityLabel(complexity: CeilingComplexity, lang: 'uk' | '
   }
 }
 
-export function getProfileLabel(profile: ProfileType, lang: 'uk' | 'ru' | 'en' = 'uk'): string {
+export function getProfileLabel(profile: ProfileType | string, lang: 'uk' | 'ru' | 'en' = 'uk', priceList?: MasterPriceList): string {
+  // Check if it's a custom profile
+  if (priceList?.customItems) {
+    const custom = priceList.customItems.find((i) => i.category === 'profile' && (i.id === profile || i.name === profile));
+    if (custom) return custom.name;
+  }
+
   if (lang === 'en') {
     switch (profile) {
       case 'standard_alu': return 'Aluminium harpoon';
@@ -280,7 +320,7 @@ export function getProfileLabel(profile: ProfileType, lang: 'uk' | 'ru' | 'en' =
       case 'shadow_kraab': return 'Shadow gap EuroKRAAB';
       case 'floating_led': return 'Floating LED';
       case 'slott_tracks': return 'Slott tracks';
-      default: return 'Standard';
+      default: return String(profile);
     }
   }
   if (lang === 'ru') {
@@ -290,7 +330,7 @@ export function getProfileLabel(profile: ProfileType, lang: 'uk' | 'ru' | 'en' =
       case 'shadow_kraab': return 'Теневой EuroKRAAB';
       case 'floating_led': return 'Парящий с LED';
       case 'slott_tracks': return 'Слот / трековый';
-      default: return 'Стандарт';
+      default: return String(profile);
     }
   }
   switch (profile) {
@@ -299,7 +339,7 @@ export function getProfileLabel(profile: ProfileType, lang: 'uk' | 'ru' | 'en' =
     case 'shadow_kraab': return 'Тіньовий EuroKRAAB';
     case 'floating_led': return 'Парящий з LED';
     case 'slott_tracks': return 'Слот / трековий';
-    default: return 'Стандартний';
+    default: return String(profile);
   }
 }
 
@@ -312,14 +352,16 @@ export function generateClientOfferText(data: {
   roomName: string;
   area: number;
   perimeter: number;
-  materialType: MaterialType;
+  materialType: MaterialType | string;
   complexity: CeilingComplexity;
-  profileType: ProfileType;
+  profileType: ProfileType | string;
   options: Partial<RoomOptions>;
+  customOptions?: { id: string; name: string; unit: string; price: number; quantity: number }[];
   cost: CostBreakdown;
   installDate?: string;
   currencySymbol?: string;
   lang?: 'uk' | 'ru' | 'en';
+  priceList?: MasterPriceList;
 }): string {
   const cur = data.currencySymbol || '₴';
   const lang = data.lang || 'uk';
@@ -331,8 +373,8 @@ export function generateClientOfferText(data: {
     if (data.address) lines.push(`📍 Об’єкт: ${data.address}`);
     lines.push(`🚪 Приміщення: ${data.roomName}`);
     lines.push(`📐 Площа: ${data.area} м² | Периметр: ${data.perimeter} м.п.`);
-    lines.push(`✨ Полотно: ${getMaterialLabel(data.materialType, lang)}`);
-    lines.push(`🔨 Профіль: ${getProfileLabel(data.profileType, lang)}`);
+    lines.push(`✨ Полотно: ${getMaterialLabel(data.materialType, lang, data.priceList)}`);
+    lines.push(`🔨 Профіль: ${getProfileLabel(data.profileType, lang, data.priceList)}`);
     lines.push(`📐 Складність: ${getComplexityLabel(data.complexity, lang)}`);
 
     const optLines: string[] = [];
@@ -343,6 +385,14 @@ export function generateClientOfferText(data: {
     if (data.options.curtainNicheMeters) optLines.push(`• Ніша під карниз: ${data.options.curtainNicheMeters} м`);
     if (data.options.pipePassCount) optLines.push(`• Обвід труб: ${data.options.pipePassCount} шт`);
     if (data.options.hardWallMeters) optLines.push(`• Керамограніт: ${data.options.hardWallMeters} м`);
+
+    if (data.customOptions && data.customOptions.length > 0) {
+      data.customOptions.forEach((co) => {
+        if (co.quantity > 0) {
+          optLines.push(`• ${co.name}: ${co.quantity} ${co.unit}`);
+        }
+      });
+    }
 
     if (optLines.length > 0) {
       lines.push(`\nДодаткові опції:`);

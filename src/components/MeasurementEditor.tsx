@@ -131,12 +131,47 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
   // Touch editor mode toggle
   const [isTouchEditMode, setIsTouchEditMode] = useState<boolean>(true);
 
+  // Compute available canvases: standard without deletedStandardKeys + customItems
+  const availableCanvases = [
+    { id: 'pvc_matte', label: t.pvcMatte },
+    { id: 'pvc_glossy', label: t.pvcGlossy },
+    { id: 'pvc_satin', label: t.pvcSatin },
+    { id: 'fabric', label: t.fabric },
+    { id: 'fireproof_km2', label: t.fireproofKM2 },
+    { id: 'acoustic', label: t.acoustic },
+  ]
+    .filter((mat) => !(priceList.deletedStandardKeys || []).includes(mat.id))
+    .concat(
+      (priceList.customItems || [])
+        .filter((i) => i.category === 'canvas')
+        .map((i) => ({ id: i.id, label: i.name }))
+    );
+
+  // Compute available profiles: standard without deletedStandardKeys + customItems
+  const availableProfiles = [
+    { id: 'standard_alu', label: t.profileStandardAlu },
+    { id: 'pvc', label: t.profilePVC },
+    { id: 'shadow_kraab', label: t.profileShadow },
+    { id: 'floating_led', label: t.profileFloating },
+    { id: 'slott_tracks', label: t.profileSlott },
+  ]
+    .filter((prof) => !(priceList.deletedStandardKeys || []).includes(prof.id))
+    .concat(
+      (priceList.customItems || [])
+        .filter((i) => i.category === 'profile')
+        .map((i) => ({ id: i.id, label: i.name }))
+    );
+
   // Ceiling parameters
-  const [materialType, setMaterialType] = useState<MaterialType>(initialMeasurement?.materialType || 'pvc_matte');
+  const [materialType, setMaterialType] = useState<MaterialType | string>(
+    initialMeasurement?.materialType || availableCanvases[0]?.id || 'pvc_matte'
+  );
   const [canvasBrand, setCanvasBrand] = useState(initialMeasurement?.canvasBrand || 'MSD Premium');
   const [canvasColor, setCanvasColor] = useState(initialMeasurement?.canvasColor || 'Білий матовий (303)');
   const [complexity, setComplexity] = useState<CeilingComplexity>(initialMeasurement?.complexity || 'straight');
-  const [profileType, setProfileType] = useState<ProfileType>(initialMeasurement?.profileType || 'standard_alu');
+  const [profileType, setProfileType] = useState<ProfileType | string>(
+    initialMeasurement?.profileType || availableProfiles[0]?.id || 'standard_alu'
+  );
 
   // Options
   const [options, setOptions] = useState(initialMeasurement?.options || {
@@ -150,6 +185,25 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
     extraCorners: 0,
     hardWallMeters: 0,
   });
+
+  // Custom options
+  const [customOptionsQuantities, setCustomOptionsQuantities] = useState<Record<string, number>>(() => {
+    const map: Record<string, number> = {};
+    (initialMeasurement?.customOptions || []).forEach((co) => {
+      map[co.id] = co.quantity;
+    });
+    return map;
+  });
+
+  const customOptionsList = (priceList.customItems || [])
+    .filter((i) => i.category === 'work' || i.category === 'option')
+    .map((i) => ({
+      id: i.id,
+      name: i.name,
+      unit: i.unit,
+      price: i.price,
+      quantity: customOptionsQuantities[i.id] || 0,
+    }));
 
   const [comments, setComments] = useState(initialMeasurement?.comments || '');
   const [photos, setPhotos] = useState(initialMeasurement?.photos || []);
@@ -183,6 +237,7 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
     complexity,
     profileType,
     options,
+    customOptions: customOptionsList,
     priceList,
   });
 
@@ -248,6 +303,7 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
       complexity,
       profileType,
       options,
+      customOptions: customOptionsList.filter((co) => co.quantity > 0),
       comments,
       photos,
       costDetails,
@@ -762,18 +818,11 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
         </label>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {[
-            { id: 'pvc_matte', label: t.pvcMatte },
-            { id: 'pvc_glossy', label: t.pvcGlossy },
-            { id: 'pvc_satin', label: t.pvcSatin },
-            { id: 'fabric', label: t.fabric },
-            { id: 'fireproof_km2', label: t.fireproofKM2 },
-            { id: 'acoustic', label: t.acoustic },
-          ].map((mat) => (
+          {availableCanvases.map((mat) => (
             <button
               key={mat.id}
               type="button"
-              onClick={() => setMaterialType(mat.id as MaterialType)}
+              onClick={() => setMaterialType(mat.id)}
               className={`p-2.5 rounded-xl border text-left transition ${
                 materialType === mat.id
                   ? 'border-cyan-500 bg-cyan-50 text-cyan-900 shadow-sm ring-1 ring-cyan-500 dark:bg-cyan-950/40 dark:text-white'
@@ -813,14 +862,14 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
           <span className="text-xs text-slate-600 dark:text-slate-400 block mb-2 font-medium">{t.profileSystem}:</span>
           <select
             value={profileType}
-            onChange={(e) => setProfileType(e.target.value as ProfileType)}
+            onChange={(e) => setProfileType(e.target.value)}
             className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-cyan-500"
           >
-            <option value="standard_alu">{t.profileStandardAlu}</option>
-            <option value="pvc">{t.profilePVC}</option>
-            <option value="shadow_kraab">{t.profileShadow}</option>
-            <option value="floating_led">{t.profileFloating}</option>
-            <option value="slott_tracks">{t.profileSlott}</option>
+            {availableProfiles.map((prof) => (
+              <option key={prof.id} value={prof.id}>
+                {prof.label}
+              </option>
+            ))}
           </select>
         </div>
       </div>
@@ -833,88 +882,119 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
         </label>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <NumericInput
-            label={t.lightLines}
-            value={options.lightLinesMeters}
-            onChange={(val) => setOptions((prev) => ({ ...prev, lightLinesMeters: val }))}
-            unit="м"
-            min={0}
-            steppers={[-0.5, 0.5]}
-            numpadTitle={t.lightLines}
-          />
+          {!(priceList.deletedStandardKeys || []).includes('lightLinePerMeter') && (
+            <NumericInput
+              label={t.lightLines}
+              value={options.lightLinesMeters}
+              onChange={(val) => setOptions((prev) => ({ ...prev, lightLinesMeters: val }))}
+              unit="м"
+              min={0}
+              steppers={[-0.5, 0.5]}
+              numpadTitle={t.lightLines}
+            />
+          )}
 
-          <NumericInput
-            label={t.shadowGap}
-            value={options.shadowProfileMeters}
-            onChange={(val) => setOptions((prev) => ({ ...prev, shadowProfileMeters: val }))}
-            unit="м"
-            min={0}
-            steppers={[-1, 1]}
-            numpadTitle={t.shadowGap}
-          />
+          {!(priceList.deletedStandardKeys || []).includes('shadowProfilePerMeter') && (
+            <NumericInput
+              label={t.shadowGap}
+              value={options.shadowProfileMeters}
+              onChange={(val) => setOptions((prev) => ({ ...prev, shadowProfileMeters: val }))}
+              unit="м"
+              min={0}
+              steppers={[-1, 1]}
+              numpadTitle={t.shadowGap}
+            />
+          )}
 
-          <NumericInput
-            label={t.floatingProfile}
-            value={options.floatingCeilingMeters}
-            onChange={(val) => setOptions((prev) => ({ ...prev, floatingCeilingMeters: val }))}
-            unit="м"
-            min={0}
-            steppers={[-1, 1]}
-            numpadTitle={t.floatingProfile}
-          />
+          {!(priceList.deletedStandardKeys || []).includes('floatingProfilePerMeter') && (
+            <NumericInput
+              label={t.floatingProfile}
+              value={options.floatingCeilingMeters}
+              onChange={(val) => setOptions((prev) => ({ ...prev, floatingCeilingMeters: val }))}
+              unit="м"
+              min={0}
+              steppers={[-1, 1]}
+              numpadTitle={t.floatingProfile}
+            />
+          )}
 
-          <NumericInput
-            label={t.chandelier}
-            value={options.chandeliersCount}
-            onChange={(val) => setOptions((prev) => ({ ...prev, chandeliersCount: val }))}
-            unit="шт"
-            min={0}
-            allowDecimals={false}
-            steppers={[-1, 1]}
-            numpadTitle={t.chandelier}
-          />
+          {!(priceList.deletedStandardKeys || []).includes('chandelierInstallation') && (
+            <NumericInput
+              label={t.chandelier}
+              value={options.chandeliersCount}
+              onChange={(val) => setOptions((prev) => ({ ...prev, chandeliersCount: val }))}
+              unit="шт"
+              min={0}
+              allowDecimals={false}
+              steppers={[-1, 1]}
+              numpadTitle={t.chandelier}
+            />
+          )}
 
-          <NumericInput
-            label={t.spotGX53}
-            value={options.spotsGX53Count}
-            onChange={(val) => setOptions((prev) => ({ ...prev, spotsGX53Count: val }))}
-            unit="шт"
-            min={0}
-            allowDecimals={false}
-            steppers={[-1, 1]}
-            numpadTitle={t.spotGX53}
-          />
+          {!(priceList.deletedStandardKeys || []).includes('spotInstallation') && (
+            <NumericInput
+              label={t.spotGX53}
+              value={options.spotsGX53Count}
+              onChange={(val) => setOptions((prev) => ({ ...prev, spotsGX53Count: val }))}
+              unit="шт"
+              min={0}
+              allowDecimals={false}
+              steppers={[-1, 1]}
+              numpadTitle={t.spotGX53}
+            />
+          )}
 
-          <NumericInput
-            label={t.pipePass}
-            value={options.pipePassCount}
-            onChange={(val) => setOptions((prev) => ({ ...prev, pipePassCount: val }))}
-            unit="шт"
-            min={0}
-            allowDecimals={false}
-            steppers={[-1, 1]}
-            numpadTitle={t.pipePass}
-          />
+          {!(priceList.deletedStandardKeys || []).includes('pipePass') && (
+            <NumericInput
+              label={t.pipePass}
+              value={options.pipePassCount}
+              onChange={(val) => setOptions((prev) => ({ ...prev, pipePassCount: val }))}
+              unit="шт"
+              min={0}
+              allowDecimals={false}
+              steppers={[-1, 1]}
+              numpadTitle={t.pipePass}
+            />
+          )}
 
-          <NumericInput
-            label={t.curtainNiche}
-            value={options.curtainNicheMeters}
-            onChange={(val) => setOptions((prev) => ({ ...prev, curtainNicheMeters: val }))}
-            unit="м"
-            min={0}
-            steppers={[-0.5, 0.5]}
-            numpadTitle={t.curtainNiche}
-          />
+          {!(priceList.deletedStandardKeys || []).includes('curtainNichePerMeter') && (
+            <NumericInput
+              label={t.curtainNiche}
+              value={options.curtainNicheMeters}
+              onChange={(val) => setOptions((prev) => ({ ...prev, curtainNicheMeters: val }))}
+              unit="м"
+              min={0}
+              steppers={[-0.5, 0.5]}
+              numpadTitle={t.curtainNiche}
+            />
+          )}
 
-          <NumericInput
-            label={t.hardWall}
-            value={options.hardWallMeters}
-            onChange={(val) => setOptions((prev) => ({ ...prev, hardWallMeters: val }))}
-            unit="м"
-            min={0}
-            steppers={[-1, 1]}
-            numpadTitle={t.hardWall}
-          />
+          {!(priceList.deletedStandardKeys || []).includes('hardWallPerMeter') && (
+            <NumericInput
+              label={t.hardWall}
+              value={options.hardWallMeters}
+              onChange={(val) => setOptions((prev) => ({ ...prev, hardWallMeters: val }))}
+              unit="м"
+              min={0}
+              steppers={[-1, 1]}
+              numpadTitle={t.hardWall}
+            />
+          )}
+
+          {/* Custom works & options */}
+          {customOptionsList.map((customOpt) => (
+            <NumericInput
+              key={customOpt.id}
+              label={customOpt.name}
+              value={customOpt.quantity}
+              onChange={(val) => setCustomOptionsQuantities((prev) => ({ ...prev, [customOpt.id]: val }))}
+              unit={customOpt.unit || 'шт'}
+              min={0}
+              steppers={customOpt.unit === 'м' || customOpt.unit === 'м²' || customOpt.unit === 'м.п.' ? [-0.5, 0.5] : [-1, 1]}
+              helperText={`(${customOpt.price} ${currencySymbol}/${customOpt.unit || 'шт'})`}
+              numpadTitle={customOpt.name}
+            />
+          ))}
         </div>
       </div>
 
@@ -983,6 +1063,20 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
           </div>
         </div>
 
+        {customOptionsList.filter((co) => co.quantity > 0).length > 0 && (
+          <div className="pt-2 border-t border-cyan-100 dark:border-slate-800 space-y-1">
+            <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400">Власні роботи та опції:</span>
+            {customOptionsList.filter((co) => co.quantity > 0).map((co) => (
+              <div key={co.id} className="flex justify-between text-xs text-slate-600 dark:text-slate-300">
+                <span>• {co.name} ({co.quantity} {co.unit}):</span>
+                <span className="font-mono font-bold text-slate-900 dark:text-white">
+                  +{(co.quantity * co.price).toLocaleString('uk-UA')} {currencySymbol}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="flex gap-2 mt-2">
           <button
             type="button"
@@ -1034,6 +1128,7 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
             complexity,
             profileType,
             options,
+            customOptions: customOptionsList.filter((co) => co.quantity > 0),
             comments,
             photos,
             costDetails,
@@ -1041,6 +1136,7 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
           }}
           parentObject={activeObject}
           client={activeClient}
+          priceList={priceList}
           currencySymbol={currencySymbol}
           t={t}
           locale={locale}

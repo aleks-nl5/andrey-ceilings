@@ -391,10 +391,16 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
                   totalCost: 0,
                 };
 
-                const canvasRate = prices.canvasPrices[room.materialType] || DEFAULT_PRICE_LIST.canvasPrices.pvc_matte;
+                const customCanvasItem = (prices.customItems || []).find((i) => i.id === room.materialType);
+                const canvasRate = customCanvasItem 
+                  ? customCanvasItem.price 
+                  : (prices.canvasPrices[room.materialType as keyof typeof prices.canvasPrices] || DEFAULT_PRICE_LIST.canvasPrices.pvc_matte);
                 const canvasTotal = cost.canvasCost || Math.round(room.area * canvasRate);
 
-                const profileRate = prices.profilePrices[room.profileType] || DEFAULT_PRICE_LIST.profilePrices.standard_alu;
+                const customProfileItem = (prices.customItems || []).find((i) => i.id === room.profileType);
+                const profileRate = customProfileItem 
+                  ? customProfileItem.price 
+                  : (prices.profilePrices[room.profileType as keyof typeof prices.profilePrices] || DEFAULT_PRICE_LIST.profilePrices.standard_alu);
                 const profileTotal = cost.profileCost || Math.round(room.perimeter * profileRate);
 
                 const extraCorners = Math.max(0, (room.cornersCount || 4) - 4);
@@ -418,7 +424,7 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
                           {roomIdx + 1}. {room.name || 'Приміщення'}
                         </h3>
                         <p className="text-[11px] text-gray-600">
-                          {getMaterialLabel(room.materialType, locale)} {room.canvasBrand ? `(${room.canvasBrand})` : ''} · {getProfileLabel(room.profileType, locale)}
+                          {getMaterialLabel(room.materialType, locale, prices)} {room.canvasBrand ? `(${room.canvasBrand})` : ''} · {getProfileLabel(room.profileType, locale, prices)}
                         </p>
                       </div>
                       <div className="text-xs font-mono font-bold text-black">
@@ -476,7 +482,7 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
                           <tr>
                             <td className="py-1 px-2 text-center text-gray-500">{rowNum++}</td>
                             <td className="py-1 px-2">
-                              Полотно натяжної стелі ({getMaterialLabel(room.materialType, locale)}{room.canvasColor ? `, ${room.canvasColor}` : ''})
+                              Полотно натяжної стелі ({getMaterialLabel(room.materialType, locale, prices)}{room.canvasColor ? `, ${room.canvasColor}` : ''})
                             </td>
                             <td className="py-1 px-2 text-center font-mono">{room.area}</td>
                             <td className="py-1 px-2 text-center">м²</td>
@@ -488,7 +494,7 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
                           <tr>
                             <td className="py-1 px-2 text-center text-gray-500">{rowNum++}</td>
                             <td className="py-1 px-2">
-                              Профіль кріплення та монтаж ({getProfileLabel(room.profileType, locale)})
+                              Профіль кріплення та монтаж ({getProfileLabel(room.profileType, locale, prices)})
                             </td>
                             <td className="py-1 px-2 text-center font-mono">{room.perimeter}</td>
                             <td className="py-1 px-2 text-center">м.п.</td>
@@ -579,6 +585,18 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
                               <td className="py-1 px-2 text-right font-mono font-semibold">{hardWallCost}</td>
                             </tr>
                           )}
+
+                          {/* 10. Custom Works and Options */}
+                          {(room.customOptions || []).filter((co) => co.quantity > 0).map((co) => (
+                            <tr key={co.id}>
+                              <td className="py-1 px-2 text-center text-gray-500">{rowNum++}</td>
+                              <td className="py-1 px-2">{co.name}</td>
+                              <td className="py-1 px-2 text-center font-mono">{co.quantity}</td>
+                              <td className="py-1 px-2 text-center">{co.unit || 'шт'}</td>
+                              <td className="py-1 px-2 text-right font-mono">{co.price}</td>
+                              <td className="py-1 px-2 text-right font-mono font-semibold">{Math.round(co.quantity * co.price)}</td>
+                            </tr>
+                          ))}
 
                           {/* Subtotal row */}
                           <tr className="bg-gray-50 font-bold border-t-2 border-black">

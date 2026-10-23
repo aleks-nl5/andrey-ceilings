@@ -24,6 +24,7 @@ import {
   MasterProfile 
 } from './types/database';
 import { AppStorage } from './db/storage';
+import { calculateCeilingCost } from './utils/calculator';
 import { MasterDashboard } from './components/MasterDashboard';
 import { ClientObjectManager } from './components/ClientObjectManager';
 import { MeasurementEditor } from './components/MeasurementEditor';
@@ -361,11 +362,23 @@ export default function App() {
     roomName: string;
     area: number;
     perimeter: number;
-    materialType: MaterialType;
+    materialType: MaterialType | string;
     complexity: CeilingComplexity;
-    profileType: ProfileType;
+    profileType: ProfileType | string;
     options: RoomOptions;
+    customOptions?: { id: string; name: string; unit: string; price: number; quantity: number }[];
   }) => {
+    const cost = calculateCeilingCost({
+      area: data.area,
+      perimeter: data.perimeter,
+      materialType: data.materialType,
+      complexity: data.complexity,
+      profileType: data.profileType,
+      options: data.options,
+      customOptions: data.customOptions,
+      priceList,
+    });
+
     const newMeas: RoomMeasurement = {
       id: `meas-${Date.now()}`,
       objectId: data.objectId,
@@ -383,15 +396,10 @@ export default function App() {
       complexity: data.complexity,
       profileType: data.profileType,
       options: data.options,
+      customOptions: data.customOptions,
       comments: locale === 'en' ? 'Added from quick calculator' : 'Додано з швидкого калькулятора',
       photos: [],
-      costDetails: {
-        canvasCost: 0,
-        profileCost: 0,
-        complexityCost: 0,
-        optionsCost: 0,
-        totalCost: 0,
-      },
+      costDetails: cost,
       updatedAt: new Date().toISOString(),
     };
     AppStorage.saveMeasurement(newMeas);

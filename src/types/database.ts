@@ -83,13 +83,14 @@ export interface RoomMeasurement {
   cornersCount: number;           // Количество углов
   
   // Технические параметры потолка
-  materialType: MaterialType;     // ПВХ, ткань и т.д.
+  materialType: MaterialType | string;     // ПВХ, ткань або власна назва/id
   canvasBrand: string;            // MSD Premium, Bauf, Descor
   canvasColor: string;            // Белый матовый, сатин, фактурный
   complexity: CeilingComplexity;  // прямой угол, многоуровневый, с криволинейными элементами
-  profileType: ProfileType;
+  profileType: ProfileType | string;       // стандартний або власний профіль
   
   options: RoomOptions;
+  customOptions?: { id: string; name: string; unit: string; price: number; quantity: number }[];
   comments: string;               // Текстовые комментарии и примечания по замеру
   photos: MeasurementPhoto[];     // Фотографии объекта
   costDetails: CostBreakdown;

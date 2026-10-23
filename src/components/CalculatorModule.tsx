@@ -44,10 +44,11 @@ interface CalculatorModuleProps {
     roomName: string;
     area: number;
     perimeter: number;
-    materialType: MaterialType;
+    materialType: MaterialType | string;
     complexity: CeilingComplexity;
-    profileType: ProfileType;
+    profileType: ProfileType | string;
     options: RoomOptions;
+    customOptions?: { id: string; name: string; unit: string; price: number; quantity: number }[];
   }) => void;
 }
 
@@ -71,10 +72,45 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({
   const [directArea, setDirectArea] = useState<number>(18.5);
   const [customPerimeter, setCustomPerimeter] = useState<boolean>(false);
   const [manualPerimeter, setManualPerimeter] = useState<number>(17.5);
+
+  // Compute available canvases: standard without deletedStandardKeys + customItems
+  const availableCanvases = [
+    { id: 'pvc_matte', label: t.pvcMatte, price: priceList.canvasPrices.pvc_matte },
+    { id: 'pvc_glossy', label: t.pvcGlossy, price: priceList.canvasPrices.pvc_glossy },
+    { id: 'pvc_satin', label: t.pvcSatin, price: priceList.canvasPrices.pvc_satin },
+    { id: 'fabric', label: t.fabric, price: priceList.canvasPrices.fabric },
+    { id: 'fireproof_km2', label: t.fireproofKM2, price: priceList.canvasPrices.fireproof_km2 },
+    { id: 'acoustic', label: t.acoustic, price: priceList.canvasPrices.acoustic },
+  ]
+    .filter((mat) => !(priceList.deletedStandardKeys || []).includes(mat.id))
+    .concat(
+      (priceList.customItems || [])
+        .filter((i) => i.category === 'canvas')
+        .map((i) => ({ id: i.id, label: i.name, price: i.price }))
+    );
+
+  // Compute available profiles: standard without deletedStandardKeys + customItems
+  const availableProfiles = [
+    { id: 'standard_alu', label: t.profileStandardAlu, price: priceList.profilePrices.standard_alu },
+    { id: 'pvc', label: t.profilePVC, price: priceList.profilePrices.pvc },
+    { id: 'shadow_kraab', label: t.profileShadow, price: priceList.profilePrices.shadow_kraab },
+    { id: 'floating_led', label: t.profileFloating, price: priceList.profilePrices.floating_led },
+    { id: 'slott_tracks', label: t.profileSlott, price: priceList.profilePrices.slott_tracks },
+  ]
+    .filter((prof) => !(priceList.deletedStandardKeys || []).includes(prof.id))
+    .concat(
+      (priceList.customItems || [])
+        .filter((i) => i.category === 'profile')
+        .map((i) => ({ id: i.id, label: i.name, price: i.price }))
+    );
   
-  const [materialType, setMaterialType] = useState<MaterialType>('pvc_matte');
+  const [materialType, setMaterialType] = useState<MaterialType | string>(
+    availableCanvases[0]?.id || 'pvc_matte'
+  );
   const [complexity, setComplexity] = useState<CeilingComplexity>('straight');
-  const [profileType, setProfileType] = useState<ProfileType>('standard_alu');
+  const [profileType, setProfileType] = useState<ProfileType | string>(
+    availableProfiles[0]?.id || 'standard_alu'
+  );
 
   // Options
   const [lightLinesMeters, setLightLinesMeters] = useState<number>(0);
@@ -85,6 +121,9 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({
   const [pipePassCount, setPipePassCount] = useState<number>(1);
   const [curtainNicheMeters, setCurtainNicheMeters] = useState<number>(3.0);
   const [hardWallMeters, setHardWallMeters] = useState<number>(0);
+
+  // Custom options and works quantities map
+  const [customOptionsQuantities, setCustomOptionsQuantities] = useState<Record<string, number>>({});
 
   // Link to existing object
   const [selectedObjectId, setSelectedObjectId] = useState<string>(objects[0]?.id || '');
@@ -117,6 +156,16 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({
     hardWallMeters,
   };
 
+  const customOptionsList = (priceList.customItems || [])
+    .filter((i) => i.category === 'work' || i.category === 'option')
+    .map((i) => ({
+      id: i.id,
+      name: i.name,
+      unit: i.unit,
+      price: i.price,
+      quantity: customOptionsQuantities[i.id] || 0,
+    }));
+
   const cost = calculateCeilingCost({
     area: effectiveArea,
     perimeter: effectivePerimeter,
@@ -124,6 +173,7 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({
     complexity,
     profileType,
     options: currentOptions,
+    customOptions: customOptionsList,
     priceList,
   });
 
@@ -140,10 +190,12 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({
     complexity,
     profileType,
     options: currentOptions,
+    customOptions: customOptionsList,
     cost,
     installDate: selectedObject?.installDate,
     currencySymbol,
     lang: locale,
+    priceList,
   });
 
   const handleCopyOffer = () => {
@@ -163,6 +215,7 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({
       complexity,
       profileType,
       options: currentOptions,
+      customOptions: customOptionsList.filter((co) => co.quantity > 0),
     });
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 3000);
@@ -361,18 +414,11 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({
             </span>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-              {[
-                { id: 'pvc_matte', label: t.pvcMatte, price: priceList.canvasPrices.pvc_matte },
-                { id: 'pvc_glossy', label: t.pvcGlossy, price: priceList.canvasPrices.pvc_glossy },
-                { id: 'pvc_satin', label: t.pvcSatin, price: priceList.canvasPrices.pvc_satin },
-                { id: 'fabric', label: t.fabric, price: priceList.canvasPrices.fabric },
-                { id: 'fireproof_km2', label: t.fireproofKM2, price: priceList.canvasPrices.fireproof_km2 },
-                { id: 'acoustic', label: t.acoustic, price: priceList.canvasPrices.acoustic },
-              ].map((item) => (
+              {availableCanvases.map((item) => (
                 <button
                   key={item.id}
                   type="button"
-                  onClick={() => setMaterialType(item.id as MaterialType)}
+                  onClick={() => setMaterialType(item.id)}
                   className={`p-3 rounded-xl border text-left transition flex flex-col justify-between ${
                     materialType === item.id
                       ? 'border-cyan-500 bg-cyan-950/40 text-white ring-1 ring-cyan-500'
@@ -424,15 +470,11 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({
               {t.profileSystem}
             </span>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              {[
-                { id: 'standard_alu', label: t.profileStandardAlu, price: priceList.profilePrices.standard_alu },
-                { id: 'shadow_kraab', label: t.profileShadow, price: priceList.profilePrices.shadow_kraab },
-                { id: 'floating_led', label: t.profileFloating, price: priceList.profilePrices.floating_led },
-              ].map((prof) => (
+              {availableProfiles.map((prof) => (
                 <button
                   key={prof.id}
                   type="button"
-                  onClick={() => setProfileType(prof.id as ProfileType)}
+                  onClick={() => setProfileType(prof.id)}
                   className={`p-2.5 rounded-xl border text-left text-xs transition ${
                     profileType === prof.id
                       ? 'border-cyan-500 bg-cyan-950/40 text-cyan-300 ring-1 ring-cyan-500'
@@ -454,96 +496,127 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({
             </span>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <NumericInput
-                label={t.lightLines}
-                value={lightLinesMeters}
-                onChange={setLightLinesMeters}
-                unit="м"
-                min={0}
-                steppers={[-0.5, 0.5]}
-                helperText={`(${priceList.lightLinePerMeter} ${currencySymbol}/м)`}
-                numpadTitle={t.lightLines}
-              />
+              {!(priceList.deletedStandardKeys || []).includes('lightLinePerMeter') && (
+                <NumericInput
+                  label={t.lightLines}
+                  value={lightLinesMeters}
+                  onChange={setLightLinesMeters}
+                  unit="м"
+                  min={0}
+                  steppers={[-0.5, 0.5]}
+                  helperText={`(${priceList.lightLinePerMeter} ${currencySymbol}/м)`}
+                  numpadTitle={t.lightLines}
+                />
+              )}
 
-              <NumericInput
-                label={t.shadowGap}
-                value={shadowProfileMeters}
-                onChange={setShadowProfileMeters}
-                unit="м"
-                min={0}
-                steppers={[-1, 1]}
-                helperText={`(${priceList.shadowProfilePerMeter} ${currencySymbol}/м)`}
-                numpadTitle={t.shadowGap}
-              />
+              {!(priceList.deletedStandardKeys || []).includes('shadowProfilePerMeter') && (
+                <NumericInput
+                  label={t.shadowGap}
+                  value={shadowProfileMeters}
+                  onChange={setShadowProfileMeters}
+                  unit="м"
+                  min={0}
+                  steppers={[-1, 1]}
+                  helperText={`(${priceList.shadowProfilePerMeter} ${currencySymbol}/м)`}
+                  numpadTitle={t.shadowGap}
+                />
+              )}
 
-              <NumericInput
-                label={t.floatingProfile}
-                value={floatingCeilingMeters}
-                onChange={setFloatingCeilingMeters}
-                unit="м"
-                min={0}
-                steppers={[-1, 1]}
-                helperText={`(${priceList.floatingProfilePerMeter} ${currencySymbol}/м)`}
-                numpadTitle={t.floatingProfile}
-              />
+              {!(priceList.deletedStandardKeys || []).includes('floatingProfilePerMeter') && (
+                <NumericInput
+                  label={t.floatingProfile}
+                  value={floatingCeilingMeters}
+                  onChange={setFloatingCeilingMeters}
+                  unit="м"
+                  min={0}
+                  steppers={[-1, 1]}
+                  helperText={`(${priceList.floatingProfilePerMeter} ${currencySymbol}/м)`}
+                  numpadTitle={t.floatingProfile}
+                />
+              )}
 
-              <NumericInput
-                label={t.chandelier}
-                value={chandeliersCount}
-                onChange={setChandeliersCount}
-                unit="шт"
-                min={0}
-                allowDecimals={false}
-                steppers={[-1, 1]}
-                helperText={`(${priceList.chandelierInstallation} ${currencySymbol}/шт)`}
-                numpadTitle={t.chandelier}
-              />
+              {!(priceList.deletedStandardKeys || []).includes('chandelierInstallation') && (
+                <NumericInput
+                  label={t.chandelier}
+                  value={chandeliersCount}
+                  onChange={setChandeliersCount}
+                  unit="шт"
+                  min={0}
+                  allowDecimals={false}
+                  steppers={[-1, 1]}
+                  helperText={`(${priceList.chandelierInstallation} ${currencySymbol}/шт)`}
+                  numpadTitle={t.chandelier}
+                />
+              )}
 
-              <NumericInput
-                label={t.spotGX53}
-                value={spotsGX53Count}
-                onChange={setSpotsGX53Count}
-                unit="шт"
-                min={0}
-                allowDecimals={false}
-                steppers={[-1, 1]}
-                helperText={`(${priceList.spotInstallation} ${currencySymbol}/шт)`}
-                numpadTitle={t.spotGX53}
-              />
+              {!(priceList.deletedStandardKeys || []).includes('spotInstallation') && (
+                <NumericInput
+                  label={t.spotGX53}
+                  value={spotsGX53Count}
+                  onChange={setSpotsGX53Count}
+                  unit="шт"
+                  min={0}
+                  allowDecimals={false}
+                  steppers={[-1, 1]}
+                  helperText={`(${priceList.spotInstallation} ${currencySymbol}/шт)`}
+                  numpadTitle={t.spotGX53}
+                />
+              )}
 
-              <NumericInput
-                label={t.pipePass}
-                value={pipePassCount}
-                onChange={setPipePassCount}
-                unit="шт"
-                min={0}
-                allowDecimals={false}
-                steppers={[-1, 1]}
-                helperText={`(${priceList.pipePass} ${currencySymbol}/шт)`}
-                numpadTitle={t.pipePass}
-              />
+              {!(priceList.deletedStandardKeys || []).includes('pipePass') && (
+                <NumericInput
+                  label={t.pipePass}
+                  value={pipePassCount}
+                  onChange={setPipePassCount}
+                  unit="шт"
+                  min={0}
+                  allowDecimals={false}
+                  steppers={[-1, 1]}
+                  helperText={`(${priceList.pipePass} ${currencySymbol}/шт)`}
+                  numpadTitle={t.pipePass}
+                />
+              )}
 
-              <NumericInput
-                label={t.curtainNiche}
-                value={curtainNicheMeters}
-                onChange={setCurtainNicheMeters}
-                unit="м"
-                min={0}
-                steppers={[-0.5, 0.5]}
-                helperText={`(${priceList.curtainNichePerMeter} ${currencySymbol}/м)`}
-                numpadTitle={t.curtainNiche}
-              />
+              {!(priceList.deletedStandardKeys || []).includes('curtainNichePerMeter') && (
+                <NumericInput
+                  label={t.curtainNiche}
+                  value={curtainNicheMeters}
+                  onChange={setCurtainNicheMeters}
+                  unit="м"
+                  min={0}
+                  steppers={[-0.5, 0.5]}
+                  helperText={`(${priceList.curtainNichePerMeter} ${currencySymbol}/м)`}
+                  numpadTitle={t.curtainNiche}
+                />
+              )}
 
-              <NumericInput
-                label={t.hardWall}
-                value={hardWallMeters}
-                onChange={setHardWallMeters}
-                unit="м"
-                min={0}
-                steppers={[-1, 1]}
-                helperText={`(${priceList.hardWallPerMeter} ${currencySymbol}/м)`}
-                numpadTitle={t.hardWall}
-              />
+              {!(priceList.deletedStandardKeys || []).includes('hardWallPerMeter') && (
+                <NumericInput
+                  label={t.hardWall}
+                  value={hardWallMeters}
+                  onChange={setHardWallMeters}
+                  unit="м"
+                  min={0}
+                  steppers={[-1, 1]}
+                  helperText={`(${priceList.hardWallPerMeter} ${currencySymbol}/м)`}
+                  numpadTitle={t.hardWall}
+                />
+              )}
+
+              {/* Custom works and options */}
+              {customOptionsList.map((customOpt) => (
+                <NumericInput
+                  key={customOpt.id}
+                  label={customOpt.name}
+                  value={customOpt.quantity}
+                  onChange={(val) => setCustomOptionsQuantities((prev) => ({ ...prev, [customOpt.id]: val }))}
+                  unit={customOpt.unit || 'шт'}
+                  min={0}
+                  steppers={customOpt.unit === 'м' || customOpt.unit === 'м²' || customOpt.unit === 'м.п.' ? [-0.5, 0.5] : [-1, 1]}
+                  helperText={`(${customOpt.price} ${currencySymbol}/${customOpt.unit || 'шт'})`}
+                  numpadTitle={customOpt.name}
+                />
+              ))}
             </div>
           </div>
         </div>
@@ -590,6 +663,15 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({
                   +{cost.optionsCost.toLocaleString('uk-UA')} {currencySymbol}
                 </span>
               </div>
+
+              {customOptionsList.filter((co) => co.quantity > 0).map((co) => (
+                <div key={co.id} className="flex justify-between items-center py-0.5 text-[11px] text-slate-500 dark:text-slate-400 pl-2">
+                  <span>• {co.name} ({co.quantity} {co.unit}):</span>
+                  <span className="font-mono font-medium text-slate-700 dark:text-slate-300">
+                    +{(co.quantity * co.price).toLocaleString('uk-UA')} {currencySymbol}
+                  </span>
+                </div>
+              ))}
             </div>
 
             <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">

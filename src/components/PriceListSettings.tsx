@@ -607,9 +607,9 @@ export const PriceListSettings: React.FC<PriceListSettingsProps> = ({
       </div>
 
       {/* 3. PRICE LIST SECTIONS WITH FULL CRUD */}
-      <form onSubmit={handleSavePrices} className="space-y-5">
+      <form onSubmit={handleSavePrices} className="space-y-4">
         {/* Category A: Canvases (Полотна) */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-4 shadow-sm">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 space-y-3 shadow-xs">
           <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
             <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <Layers className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
@@ -625,11 +625,11 @@ export const PriceListSettings: React.FC<PriceListSettingsProps> = ({
               className="flex items-center gap-1 text-xs font-bold text-cyan-600 dark:text-cyan-400 hover:underline cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>+ Додати власне полотно</span>
+              <span>+ Додати полотно</span>
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {[
               { key: 'pvc_matte', label: 'ПВХ Матовий' },
               { key: 'pvc_satin', label: 'ПВХ Сатиновий' },
@@ -640,60 +640,60 @@ export const PriceListSettings: React.FC<PriceListSettingsProps> = ({
             ]
               .filter((mat) => !(prices.deletedStandardKeys || []).includes(mat.key))
               .map((mat) => (
-                <div key={mat.key} className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex flex-col justify-between">
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-xs font-medium text-slate-700 dark:text-slate-300 block truncate">
-                      {mat.label}
-                    </label>
+                <div key={mat.key} className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                  <span className="text-xs font-medium text-slate-800 dark:text-slate-200 truncate flex-1 min-w-0" title={mat.label}>
+                    {mat.label}
+                  </span>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <div className="relative flex items-center">
+                      <input
+                        type="number"
+                        value={prices.canvasPrices[mat.key as MaterialType] || 0}
+                        onChange={(e) => handlePriceChange('canvasPrices', mat.key, e.target.value)}
+                        className="w-20 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg pl-2 pr-6 py-1 text-xs font-mono font-bold text-slate-900 dark:text-white text-right"
+                      />
+                      <span className="absolute right-1.5 text-[10px] text-slate-400 pointer-events-none font-medium">{currencySymbol}/м²</span>
+                    </div>
                     <button
                       type="button"
                       onClick={() => handleDeleteStandardItem(mat.key)}
-                      className="text-slate-400 hover:text-red-500 p-0.5 rounded transition"
+                      className="text-slate-400 hover:text-red-500 p-1 rounded transition"
                       title="Видалити полотно"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
-                  </div>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      value={prices.canvasPrices[mat.key as MaterialType] || 0}
-                      onChange={(e) => handlePriceChange('canvasPrices', mat.key, e.target.value)}
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs font-mono font-bold text-slate-900 dark:text-white"
-                    />
-                    <span className="absolute right-3 top-1.5 text-xs text-slate-400">{currencySymbol}/м²</span>
                   </div>
                 </div>
               ))}
 
             {/* Custom Canvases */}
             {(prices.customItems || []).filter((i) => i.category === 'canvas').map((item) => (
-              <div key={item.id} className="p-3 rounded-xl bg-cyan-50/50 dark:bg-cyan-950/20 border border-cyan-200 dark:border-cyan-800 flex flex-col justify-between">
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-bold text-cyan-900 dark:text-cyan-300 truncate">
-                    {item.name}
-                  </label>
+              <div key={item.id} className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-cyan-50/50 dark:bg-cyan-950/20 border border-cyan-200 dark:border-cyan-800">
+                <span className="text-xs font-bold text-cyan-900 dark:text-cyan-300 truncate flex-1 min-w-0" title={item.name}>
+                  {item.name}
+                </span>
+                <div className="flex items-center gap-1 shrink-0">
+                  <div className="relative flex items-center">
+                    <input
+                      type="number"
+                      value={item.price}
+                      onChange={(e) => {
+                        const p = parseFloat(e.target.value) || 0;
+                        const next = (prices.customItems || []).map((ci) => ci.id === item.id ? { ...ci, price: p } : ci);
+                        setPrices({ ...prices, customItems: next });
+                      }}
+                      className="w-20 bg-white dark:bg-slate-900 border border-cyan-300 dark:border-cyan-700 rounded-lg pl-2 pr-6 py-1 text-xs font-mono font-bold text-slate-900 dark:text-white text-right"
+                    />
+                    <span className="absolute right-1.5 text-[10px] text-slate-400 pointer-events-none font-medium">{currencySymbol}/{item.unit}</span>
+                  </div>
                   <button
                     type="button"
                     onClick={() => handleDeleteCustomItem(item.id)}
-                    className="text-slate-400 hover:text-red-500 p-0.5"
+                    className="text-slate-400 hover:text-red-500 p-1 rounded transition"
                     title="Видалити позицію"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
-                </div>
-                <div className="relative">
-                  <input
-                    type="number"
-                    value={item.price}
-                    onChange={(e) => {
-                      const p = parseFloat(e.target.value) || 0;
-                      const next = (prices.customItems || []).map((ci) => ci.id === item.id ? { ...ci, price: p } : ci);
-                      setPrices({ ...prices, customItems: next });
-                    }}
-                    className="w-full bg-white dark:bg-slate-900 border border-cyan-300 dark:border-cyan-700 rounded-lg px-3 py-1.5 text-xs font-mono font-bold text-slate-900 dark:text-white"
-                  />
-                  <span className="absolute right-3 top-1.5 text-xs text-slate-400">{currencySymbol}/{item.unit}</span>
                 </div>
               </div>
             ))}
@@ -708,15 +708,15 @@ export const PriceListSettings: React.FC<PriceListSettingsProps> = ({
               { key: 'fireproof_km2' },
             ].filter((mat) => !(prices.deletedStandardKeys || []).includes(mat.key)).length === 0 &&
              (prices.customItems || []).filter((i) => i.category === 'canvas').length === 0 && (
-              <div className="col-span-full py-6 text-center text-xs text-slate-500 border border-dashed border-slate-300 dark:border-slate-800 rounded-xl">
-                Всі полотна видалено. Натисніть «+ Додати власне полотно» вище для створення нової позиції.
+              <div className="col-span-full py-4 text-center text-xs text-slate-500 border border-dashed border-slate-300 dark:border-slate-800 rounded-xl">
+                Всі полотна видалено. Натисніть «+ Додати полотно» вище для створення нової позиції.
               </div>
             )}
           </div>
         </div>
 
         {/* Category B: Profiles (Профілі) */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-4 shadow-sm">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 space-y-3 shadow-xs">
           <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
             <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <Wrench className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
@@ -736,7 +736,7 @@ export const PriceListSettings: React.FC<PriceListSettingsProps> = ({
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {[
               { key: 'standard_alu', label: 'Стіновий алюмінієвий' },
               { key: 'pvc', label: 'Стіновий пластиковий' },
@@ -746,59 +746,60 @@ export const PriceListSettings: React.FC<PriceListSettingsProps> = ({
             ]
               .filter((prof) => !(prices.deletedStandardKeys || []).includes(prof.key))
               .map((prof) => (
-                <div key={prof.key} className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex flex-col justify-between">
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-xs font-medium text-slate-700 dark:text-slate-300 block truncate">
-                      {prof.label}
-                    </label>
+                <div key={prof.key} className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                  <span className="text-xs font-medium text-slate-800 dark:text-slate-200 truncate flex-1 min-w-0" title={prof.label}>
+                    {prof.label}
+                  </span>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <div className="relative flex items-center">
+                      <input
+                        type="number"
+                        value={prices.profilePrices[prof.key as ProfileType] || 0}
+                        onChange={(e) => handlePriceChange('profilePrices', prof.key, e.target.value)}
+                        className="w-20 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg pl-2 pr-6 py-1 text-xs font-mono font-bold text-slate-900 dark:text-white text-right"
+                      />
+                      <span className="absolute right-1.5 text-[10px] text-slate-400 pointer-events-none font-medium">{currencySymbol}/м.п.</span>
+                    </div>
                     <button
                       type="button"
                       onClick={() => handleDeleteStandardItem(prof.key)}
-                      className="text-slate-400 hover:text-red-500 p-0.5 rounded transition"
+                      className="text-slate-400 hover:text-red-500 p-1 rounded transition"
                       title="Видалити профіль"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
-                  </div>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      value={prices.profilePrices[prof.key as ProfileType] || 0}
-                      onChange={(e) => handlePriceChange('profilePrices', prof.key, e.target.value)}
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs font-mono font-bold text-slate-900 dark:text-white"
-                    />
-                    <span className="absolute right-3 top-1.5 text-xs text-slate-400">{currencySymbol}/м.п.</span>
                   </div>
                 </div>
               ))}
 
             {/* Custom Profiles */}
             {(prices.customItems || []).filter((i) => i.category === 'profile').map((item) => (
-              <div key={item.id} className="p-3 rounded-xl bg-cyan-50/50 dark:bg-cyan-950/20 border border-cyan-200 dark:border-cyan-800 flex flex-col justify-between">
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-bold text-cyan-900 dark:text-cyan-300 truncate">
-                    {item.name}
-                  </label>
+              <div key={item.id} className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-cyan-50/50 dark:bg-cyan-950/20 border border-cyan-200 dark:border-cyan-800">
+                <span className="text-xs font-bold text-cyan-900 dark:text-cyan-300 truncate flex-1 min-w-0" title={item.name}>
+                  {item.name}
+                </span>
+                <div className="flex items-center gap-1 shrink-0">
+                  <div className="relative flex items-center">
+                    <input
+                      type="number"
+                      value={item.price}
+                      onChange={(e) => {
+                        const p = parseFloat(e.target.value) || 0;
+                        const next = (prices.customItems || []).map((ci) => ci.id === item.id ? { ...ci, price: p } : ci);
+                        setPrices({ ...prices, customItems: next });
+                      }}
+                      className="w-20 bg-white dark:bg-slate-900 border border-cyan-300 dark:border-cyan-700 rounded-lg pl-2 pr-6 py-1 text-xs font-mono font-bold text-slate-900 dark:text-white text-right"
+                    />
+                    <span className="absolute right-1.5 text-[10px] text-slate-400 pointer-events-none font-medium">{currencySymbol}/{item.unit}</span>
+                  </div>
                   <button
                     type="button"
                     onClick={() => handleDeleteCustomItem(item.id)}
-                    className="text-slate-400 hover:text-red-500 p-0.5"
+                    className="text-slate-400 hover:text-red-500 p-1 rounded transition"
+                    title="Видалити позицію"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
-                </div>
-                <div className="relative">
-                  <input
-                    type="number"
-                    value={item.price}
-                    onChange={(e) => {
-                      const p = parseFloat(e.target.value) || 0;
-                      const next = (prices.customItems || []).map((ci) => ci.id === item.id ? { ...ci, price: p } : ci);
-                      setPrices({ ...prices, customItems: next });
-                    }}
-                    className="w-full bg-white dark:bg-slate-900 border border-cyan-300 dark:border-cyan-700 rounded-lg px-3 py-1.5 text-xs font-mono font-bold text-slate-900 dark:text-white"
-                  />
-                  <span className="absolute right-3 top-1.5 text-xs text-slate-400">{currencySymbol}/{item.unit}</span>
                 </div>
               </div>
             ))}
@@ -812,7 +813,7 @@ export const PriceListSettings: React.FC<PriceListSettingsProps> = ({
               { key: 'slott_tracks' },
             ].filter((prof) => !(prices.deletedStandardKeys || []).includes(prof.key)).length === 0 &&
              (prices.customItems || []).filter((i) => i.category === 'profile').length === 0 && (
-              <div className="col-span-full py-6 text-center text-xs text-slate-500 border border-dashed border-slate-300 dark:border-slate-800 rounded-xl">
+              <div className="col-span-full py-4 text-center text-xs text-slate-500 border border-dashed border-slate-300 dark:border-slate-800 rounded-xl">
                 Всі профілі видалено. Натисніть «+ Додати профіль» вище для створення нової позиції.
               </div>
             )}
@@ -820,7 +821,7 @@ export const PriceListSettings: React.FC<PriceListSettingsProps> = ({
         </div>
 
         {/* Category C: Additional Works (Роботи) */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-4 shadow-sm">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 space-y-3 shadow-xs">
           <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
             <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <DollarSign className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
@@ -840,70 +841,71 @@ export const PriceListSettings: React.FC<PriceListSettingsProps> = ({
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {[
-              { key: 'extraCornerCost', label: 'Додатковий кут (понад 4)', unit: 'шт' },
+              { key: 'extraCornerCost', label: 'Додатковий кут (> 4)', unit: 'шт' },
               { key: 'pipePass', label: 'Обвід труби опалення', unit: 'шт' },
               { key: 'curtainNichePerMeter', label: 'Ніша під карниз для штор', unit: 'м.п.' },
               { key: 'hardWallPerMeter', label: 'Свердління керамограніту', unit: 'м.п.' },
-              { key: 'multilevelPerMeterCost', label: 'Перехід рівня (дворівневий)', unit: 'м.п.' },
+              { key: 'multilevelPerMeterCost', label: 'Перехід рівня стелі', unit: 'м.п.' },
               { key: 'curvedPerMeterCost', label: 'Криволінійна ділянка', unit: 'м.п.' },
             ]
               .filter((work) => !(prices.deletedStandardKeys || []).includes(work.key))
               .map((work) => (
-                <div key={work.key} className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex flex-col justify-between">
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-xs font-medium text-slate-700 dark:text-slate-300 block truncate">
-                      {work.label}
-                    </label>
+                <div key={work.key} className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                  <span className="text-xs font-medium text-slate-800 dark:text-slate-200 truncate flex-1 min-w-0" title={work.label}>
+                    {work.label}
+                  </span>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <div className="relative flex items-center">
+                      <input
+                        type="number"
+                        value={prices[work.key as keyof MasterPriceList] as number || 0}
+                        onChange={(e) => handleDirectPriceChange(work.key as keyof MasterPriceList, e.target.value)}
+                        className="w-20 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg pl-2 pr-6 py-1 text-xs font-mono font-bold text-slate-900 dark:text-white text-right"
+                      />
+                      <span className="absolute right-1.5 text-[10px] text-slate-400 pointer-events-none font-medium">{currencySymbol}/{work.unit}</span>
+                    </div>
                     <button
                       type="button"
                       onClick={() => handleDeleteStandardItem(work.key)}
-                      className="text-slate-400 hover:text-red-500 p-0.5 rounded transition"
+                      className="text-slate-400 hover:text-red-500 p-1 rounded transition"
                       title="Видалити роботу"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
-                  </div>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      value={prices[work.key as keyof MasterPriceList] as number || 0}
-                      onChange={(e) => handleDirectPriceChange(work.key as keyof MasterPriceList, e.target.value)}
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs font-mono font-bold text-slate-900 dark:text-white"
-                    />
-                    <span className="absolute right-3 top-1.5 text-xs text-slate-400">{currencySymbol}/{work.unit}</span>
                   </div>
                 </div>
               ))}
 
             {/* Custom Works */}
             {(prices.customItems || []).filter((i) => i.category === 'work').map((item) => (
-              <div key={item.id} className="p-3 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 flex flex-col justify-between">
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-bold text-emerald-900 dark:text-emerald-300 truncate">
-                    {item.name}
-                  </label>
+              <div key={item.id} className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800">
+                <span className="text-xs font-bold text-emerald-900 dark:text-emerald-300 truncate flex-1 min-w-0" title={item.name}>
+                  {item.name}
+                </span>
+                <div className="flex items-center gap-1 shrink-0">
+                  <div className="relative flex items-center">
+                    <input
+                      type="number"
+                      value={item.price}
+                      onChange={(e) => {
+                        const p = parseFloat(e.target.value) || 0;
+                        const next = (prices.customItems || []).map((ci) => ci.id === item.id ? { ...ci, price: p } : ci);
+                        setPrices({ ...prices, customItems: next });
+                      }}
+                      className="w-20 bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-700 rounded-lg pl-2 pr-6 py-1 text-xs font-mono font-bold text-slate-900 dark:text-white text-right"
+                    />
+                    <span className="absolute right-1.5 text-[10px] text-slate-400 pointer-events-none font-medium">{currencySymbol}/{item.unit}</span>
+                  </div>
                   <button
                     type="button"
                     onClick={() => handleDeleteCustomItem(item.id)}
-                    className="text-slate-400 hover:text-red-500 p-0.5"
+                    className="text-slate-400 hover:text-red-500 p-1 rounded transition"
+                    title="Видалити роботу"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
-                </div>
-                <div className="relative">
-                  <input
-                    type="number"
-                    value={item.price}
-                    onChange={(e) => {
-                      const p = parseFloat(e.target.value) || 0;
-                      const next = (prices.customItems || []).map((ci) => ci.id === item.id ? { ...ci, price: p } : ci);
-                      setPrices({ ...prices, customItems: next });
-                    }}
-                    className="w-full bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-700 rounded-lg px-3 py-1.5 text-xs font-mono font-bold text-slate-900 dark:text-white"
-                  />
-                  <span className="absolute right-3 top-1.5 text-xs text-slate-400">{currencySymbol}/{item.unit}</span>
                 </div>
               </div>
             ))}
@@ -918,7 +920,7 @@ export const PriceListSettings: React.FC<PriceListSettingsProps> = ({
               { key: 'curvedPerMeterCost' },
             ].filter((work) => !(prices.deletedStandardKeys || []).includes(work.key)).length === 0 &&
              (prices.customItems || []).filter((i) => i.category === 'work').length === 0 && (
-              <div className="col-span-full py-6 text-center text-xs text-slate-500 border border-dashed border-slate-300 dark:border-slate-800 rounded-xl">
+              <div className="col-span-full py-4 text-center text-xs text-slate-500 border border-dashed border-slate-300 dark:border-slate-800 rounded-xl">
                 Всі монтажні роботи видалено. Натисніть «+ Додати роботу» вище для створення нової позиції.
               </div>
             )}
@@ -926,11 +928,11 @@ export const PriceListSettings: React.FC<PriceListSettingsProps> = ({
         </div>
 
         {/* Category D: Lighting & Options (Освітлення) */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-4 shadow-sm">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 space-y-3 shadow-xs">
           <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
             <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <Lightbulb className="w-4 h-4 text-amber-500" />
-              <span>Освітлення та підсвічування</span>
+              <span>Освітлення та додаткові опції</span>
             </h3>
             <button
               type="button"
@@ -946,7 +948,7 @@ export const PriceListSettings: React.FC<PriceListSettingsProps> = ({
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {[
               { key: 'chandelierInstallation', label: 'Монтаж люстри', unit: 'шт' },
               { key: 'spotInstallation', label: 'Точковий світильник GX53', unit: 'шт' },
@@ -954,60 +956,60 @@ export const PriceListSettings: React.FC<PriceListSettingsProps> = ({
             ]
               .filter((opt) => !(prices.deletedStandardKeys || []).includes(opt.key))
               .map((opt) => (
-                <div key={opt.key} className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex flex-col justify-between">
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-xs font-medium text-slate-700 dark:text-slate-300 block truncate">
-                      {opt.label}
-                    </label>
+                <div key={opt.key} className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                  <span className="text-xs font-medium text-slate-800 dark:text-slate-200 truncate flex-1 min-w-0" title={opt.label}>
+                    {opt.label}
+                  </span>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <div className="relative flex items-center">
+                      <input
+                        type="number"
+                        value={prices[opt.key as keyof MasterPriceList] as number || 0}
+                        onChange={(e) => handleDirectPriceChange(opt.key as keyof MasterPriceList, e.target.value)}
+                        className="w-20 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg pl-2 pr-6 py-1 text-xs font-mono font-bold text-slate-900 dark:text-white text-right"
+                      />
+                      <span className="absolute right-1.5 text-[10px] text-slate-400 pointer-events-none font-medium">{currencySymbol}/{opt.unit}</span>
+                    </div>
                     <button
                       type="button"
                       onClick={() => handleDeleteStandardItem(opt.key)}
-                      className="text-slate-400 hover:text-red-500 p-0.5 rounded transition"
+                      className="text-slate-400 hover:text-red-500 p-1 rounded transition"
                       title="Видалити опцію"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
-                  </div>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      value={prices[opt.key as keyof MasterPriceList] as number || 0}
-                      onChange={(e) => handleDirectPriceChange(opt.key as keyof MasterPriceList, e.target.value)}
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs font-mono font-bold text-slate-900 dark:text-white"
-                    />
-                    <span className="absolute right-3 top-1.5 text-xs text-slate-400">{currencySymbol}/{opt.unit}</span>
                   </div>
                 </div>
               ))}
 
             {/* Custom Options */}
             {(prices.customItems || []).filter((i) => i.category === 'option').map((item) => (
-              <div key={item.id} className="p-3 rounded-xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 flex flex-col justify-between">
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-bold text-amber-900 dark:text-cyan-300 truncate">
-                    {item.name}
-                  </label>
+              <div key={item.id} className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
+                <span className="text-xs font-bold text-amber-900 dark:text-cyan-300 truncate flex-1 min-w-0" title={item.name}>
+                  {item.name}
+                </span>
+                <div className="flex items-center gap-1 shrink-0">
+                  <div className="relative flex items-center">
+                    <input
+                      type="number"
+                      value={item.price}
+                      onChange={(e) => {
+                        const p = parseFloat(e.target.value) || 0;
+                        const next = (prices.customItems || []).map((ci) => ci.id === item.id ? { ...ci, price: p } : ci);
+                        setPrices({ ...prices, customItems: next });
+                      }}
+                      className="w-20 bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700 rounded-lg pl-2 pr-6 py-1 text-xs font-mono font-bold text-slate-900 dark:text-white text-right"
+                    />
+                    <span className="absolute right-1.5 text-[10px] text-slate-400 pointer-events-none font-medium">{currencySymbol}/{item.unit}</span>
+                  </div>
                   <button
                     type="button"
                     onClick={() => handleDeleteCustomItem(item.id)}
-                    className="text-slate-400 hover:text-red-500 p-0.5"
+                    className="text-slate-400 hover:text-red-500 p-1 rounded transition"
                     title="Видалити опцію"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
-                </div>
-                <div className="relative">
-                  <input
-                    type="number"
-                    value={item.price}
-                    onChange={(e) => {
-                      const p = parseFloat(e.target.value) || 0;
-                      const next = (prices.customItems || []).map((ci) => ci.id === item.id ? { ...ci, price: p } : ci);
-                      setPrices({ ...prices, customItems: next });
-                    }}
-                    className="w-full bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700 rounded-lg px-3 py-1.5 text-xs font-mono font-bold text-slate-900 dark:text-white"
-                  />
-                  <span className="absolute right-3 top-1.5 text-xs text-slate-400">{currencySymbol}/{item.unit}</span>
                 </div>
               </div>
             ))}
@@ -1019,7 +1021,7 @@ export const PriceListSettings: React.FC<PriceListSettingsProps> = ({
               { key: 'lightLinePerMeter', label: 'Світлова лінія з LED', unit: 'м.п.' },
             ].filter((opt) => !(prices.deletedStandardKeys || []).includes(opt.key)).length === 0 &&
              (prices.customItems || []).filter((i) => i.category === 'option').length === 0 && (
-              <div className="col-span-full py-6 text-center text-xs text-slate-500 border border-dashed border-slate-300 dark:border-slate-800 rounded-xl">
+              <div className="col-span-full py-4 text-center text-xs text-slate-500 border border-dashed border-slate-300 dark:border-slate-800 rounded-xl">
                 Всі опції освітлення видалено. Натисніть «+ Додати опцію» вище для створення нової позиції.
               </div>
             )}
@@ -1131,7 +1133,7 @@ export const PriceListSettings: React.FC<PriceListSettingsProps> = ({
         </div>
       )}
 
-      {/* Android Installation & APK Generation Card */}
+      {/* Installation Card */}
       <div className="bg-gradient-to-br from-cyan-50/80 via-white to-blue-50/60 dark:from-slate-900 dark:via-slate-900 dark:to-cyan-950/40 border border-cyan-200 dark:border-cyan-800/50 rounded-2xl p-5 space-y-4 shadow-md">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-cyan-100 dark:border-slate-800 pb-3">
           <div className="flex items-center gap-3">
@@ -1142,75 +1144,42 @@ export const PriceListSettings: React.FC<PriceListSettingsProps> = ({
             />
             <div>
               <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <span>Встановлення на Android та отримання APK</span>
+                <span>Встановлення</span>
               </h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">Офіційна іконка та автономний додаток для замірника</p>
             </div>
           </div>
           <span className="text-[11px] px-2 py-0.5 rounded bg-cyan-100 text-cyan-800 border border-cyan-200 dark:bg-cyan-950 dark:text-cyan-300 dark:border-cyan-800 font-semibold w-fit">
-            Android 8.0 - 15+
+            Android & iOS
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-          <div className="bg-white dark:bg-slate-950/90 border border-cyan-200 dark:border-slate-800 rounded-xl p-4 space-y-2.5 flex flex-col justify-between shadow-sm">
-            <div>
-              <div className="flex items-center gap-2 text-cyan-700 dark:text-cyan-400 font-bold text-xs mb-1">
-                <Check className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
-                <span>Спосіб 1: Миттєве встановлення на телефон (Рекомендовано)</span>
-              </div>
-              <p className="text-slate-700 dark:text-slate-300 text-[11px] leading-relaxed">
-                Вам <strong>не потрібно вручну завантажувати 50 МБ файл APK</strong> або вмикати невідомі джерела!
-              </p>
-              <ol className="list-decimal list-inside text-slate-600 dark:text-slate-400 text-[11px] space-y-1 mt-2">
-                <li>Відкрийте це посилання на телефоні в <strong>Google Chrome</strong>.</li>
-                <li>Натисніть на банер <strong>«Встановити на телефон»</strong> або в меню браузера (три крапки ⋮) оберіть <strong>«Встановити додаток»</strong>.</li>
-                <li>Android автоматично створить офіційний системний додаток (WebAPK) з повноцінною іконкою, без адресного рядка, який працює <strong>повністю офлайн без інтернету</strong>.</li>
-              </ol>
+        <div className="bg-white dark:bg-slate-950/90 border border-cyan-200 dark:border-slate-800 rounded-xl p-4 space-y-3 shadow-sm text-xs">
+          <div>
+            <div className="flex items-center gap-2 text-cyan-700 dark:text-cyan-400 font-bold text-xs mb-1.5">
+              <Check className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+              <span>Інструкція зі швидкого встановлення на телефон</span>
             </div>
-
-            <button
-              type="button"
-              onClick={() => {
-                const url = window.location.href;
-                navigator.clipboard.writeText(url);
-                setCopiedUrl(true);
-                setTimeout(() => setCopiedUrl(false), 2500);
-              }}
-              className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 active:scale-95 text-white font-bold text-xs transition shadow-sm cursor-pointer"
-            >
-              {copiedUrl ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{copiedUrl ? 'Посилання скопійовано!' : 'Скопіювати посилання для телефону'}</span>
-            </button>
+            <ol className="list-decimal list-inside text-slate-600 dark:text-slate-400 text-xs space-y-1.5 mt-2">
+              <li>Відкрийте це посилання на телефоні в <strong>Google Chrome</strong> (Android) або <strong>Safari</strong> (iPhone/iPad).</li>
+              <li>Натисніть на банер <strong>«Встановити на телефон»</strong> або в меню браузера оберіть <strong>«Встановити додаток»</strong> (або «На початковий екран» у Safari).</li>
+              <li>Система автоматично створить офіційний системний додаток з повноцінною іконкою, без адресного рядка, який працює <strong>повністю офлайн без інтернету</strong>.</li>
+            </ol>
           </div>
 
-          <div className="bg-white dark:bg-slate-950/90 border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-2.5 flex flex-col justify-between shadow-sm">
-            <div>
-              <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-bold text-xs mb-1">
-                <Package className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                <span>Спосіб 2: Отримати окремий файл .APK (PWABuilder)</span>
-              </div>
-              <p className="text-slate-700 dark:text-slate-300 text-[11px] leading-relaxed">
-                Якщо вам обов'язково потрібен окремий файл <strong>.apk</strong> (наприклад, для перенесення через месенджер чи флешку):
-              </p>
-              <ol className="list-decimal list-inside text-slate-600 dark:text-slate-400 text-[11px] space-y-1 mt-2">
-                <li>Скопіюйте посилання на цей додаток.</li>
-                <li>Перейдіть на офіційний сервіс <strong>PWABuilder</strong>.</li>
-                <li>Вставте посилання та натисніть <strong>«Package for Android»</strong>.</li>
-                <li>Завантажте готовий зібраний <strong>.apk</strong> файл.</li>
-              </ol>
-            </div>
-
-            <a
-              href="https://www.pwabuilder.com/"
-              target="_blank"
-              rel="noreferrer"
-              className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs border border-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 dark:border-slate-700 transition"
-            >
-              <ExternalLink className="w-3.5 h-3.5" />
-              <span>Відкрити PWABuilder для генерації APK</span>
-            </a>
-          </div>
+          <button
+            type="button"
+            onClick={() => {
+              const url = window.location.href;
+              navigator.clipboard.writeText(url);
+              setCopiedUrl(true);
+              setTimeout(() => setCopiedUrl(false), 2500);
+            }}
+            className="w-full sm:w-auto px-6 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 active:scale-95 text-white font-bold text-xs transition shadow-sm cursor-pointer"
+          >
+            {copiedUrl ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+            <span>{copiedUrl ? 'Посилання скопійовано!' : 'Скопіювати посилання для телефону'}</span>
+          </button>
         </div>
       </div>
 
