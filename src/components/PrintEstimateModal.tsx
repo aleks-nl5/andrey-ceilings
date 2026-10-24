@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   Printer, 
@@ -16,48 +16,8 @@ import {
 import { AppStorage } from '../db/storage';
 import { Translations, Locale } from '../i18n/translations';
 
-export const getMasterInitials = (masterName?: string, companyName?: string): string => {
-  const cleanName = (masterName || '').trim();
-  if (cleanName) {
-    const parts = cleanName.split(/\s+/).filter(Boolean);
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[1][0]).toUpperCase();
-    }
-    if (parts.length === 1 && parts[0].length >= 2) {
-      return parts[0].slice(0, 2).toUpperCase();
-    }
-    if (parts.length === 1 && parts[0].length === 1) {
-      return parts[0][0].toUpperCase();
-    }
-  }
-  const cleanCompany = (companyName || '').trim();
-  if (cleanCompany) {
-    const parts = cleanCompany.split(/\s+/).filter(Boolean);
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[1][0]).toUpperCase();
-    }
-    return cleanCompany.slice(0, 2).toUpperCase();
-  }
-  return 'СП';
-};
-
-export const generateEstimateDocNumber = (
-  date: Date = new Date(),
-  masterName?: string,
-  companyName?: string
-): string => {
-  const yy = String(date.getFullYear()).slice(-2);
-  const mm = String(date.getMonth() + 1).padStart(2, '0');
-  const dd = String(date.getDate()).padStart(2, '0');
-  const dateStr = `${yy}${mm}${dd}`;
-
-  const hh = String(date.getHours()).padStart(2, '0');
-  const min = String(date.getMinutes()).padStart(2, '0');
-  const timeStr = `${hh}${min}`;
-
-  const initials = getMasterInitials(masterName, companyName).replace(/[^a-zA-Z0-9а-яА-ЯіІїЇєЄ]/g, '') || 'СП';
-  return `${dateStr}-${initials}-${timeStr}`;
-};
+import { getMasterInitials, generateEstimateDocNumber } from '../utils/documentNumber';
+export { getMasterInitials, generateEstimateDocNumber };
 
 interface PrintEstimateModalProps {
   isOpen: boolean;
@@ -101,10 +61,59 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
     measurement?.id || allRooms[0]?.id || ''
   );
 
-  // Generate document number according to format: [РікМісяцьДень]-[ініціали Майстра]-[ГодинаХвилина], e.g. "261022-АО-1941"
-  const documentNumber = useMemo(() => {
-    return generateEstimateDocNumber(new Date(), profile?.masterName, profile?.companyName);
-  }, [profile?.masterName, profile?.companyName, isOpen]);
+  // Persistent document number for the estimate:
+  // If the single measurement or parentObject has an existing docNumber, use it permanently!
+  // If not yet assigned, generate once, persist it, and keep it permanently for all future openings.
+  const [documentNumber, setDocumentNumber] = useState<string>(() => {
+    if (measurement?.docNumber) return measurement.docNumber;
+    if (parentObject?.docNumber) return parentObject.docNumber;
+    const existing = (measurements || []).find((m) => m.docNumber);
+    if (existing?.docNumber) return existing.docNumber;
+    return generateEstimateDocNumber(
+      measurement?.updatedAt ? new Date(measurement.updatedAt) : new Date(),
+      profile?.masterName,
+      profile?.companyName
+    );
+  });
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    if (printScope === 'single') {
+      const targetRoom = allRooms.find((r) => r.id === selectedSingleId) || measurement || allRooms[0];
+      if (targetRoom) {
+        if (targetRoom.docNumber) {
+          setDocumentNumber(targetRoom.docNumber);
+        } else {
+          const generated = generateEstimateDocNumber(
+            targetRoom.updatedAt ? new Date(targetRoom.updatedAt) : new Date(),
+            profile?.masterName,
+            profile?.companyName
+          );
+          targetRoom.docNumber = generated;
+          AppStorage.saveMeasurement(targetRoom);
+          setDocumentNumber(generated);
+        }
+      }
+    } else {
+      // all rooms / whole object
+      if (parentObject?.docNumber) {
+        setDocumentNumber(parentObject.docNumber);
+      } else {
+        const firstRoomDoc = allRooms.find((r) => r.docNumber)?.docNumber;
+        const generated = firstRoomDoc || generateEstimateDocNumber(
+          parentObject?.updatedAt ? new Date(parentObject.updatedAt) : new Date(),
+          profile?.masterName,
+          profile?.companyName
+        );
+        if (parentObject) {
+          parentObject.docNumber = generated;
+          AppStorage.saveObject(parentObject);
+        }
+        setDocumentNumber(generated);
+      }
+    }
+  }, [isOpen, printScope, selectedSingleId, profile?.masterName, profile?.companyName]);
 
   if (!isOpen) return null;
 
@@ -445,28 +454,29 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
                   optionsCost: 0,
                   totalCost: 0,
                 };
+                const roomPrices = room.priceSnapshot || prices;
 
-                const customCanvasItem = (prices.customItems || []).find((i) => i.id === room.materialType);
+                const customCanvasItem = (roomPrices.customItems || []).find((i) => i.id === room.materialType);
                 const canvasRate = customCanvasItem 
                   ? customCanvasItem.price 
-                  : (prices.canvasPrices[room.materialType as keyof typeof prices.canvasPrices] || DEFAULT_PRICE_LIST.canvasPrices.pvc_matte);
+                  : (roomPrices.canvasPrices[room.materialType as keyof typeof roomPrices.canvasPrices] || DEFAULT_PRICE_LIST.canvasPrices.pvc_matte);
                 const canvasTotal = cost.canvasCost || Math.round(room.area * canvasRate);
 
-                const customProfileItem = (prices.customItems || []).find((i) => i.id === room.profileType);
+                const customProfileItem = (roomPrices.customItems || []).find((i) => i.id === room.profileType);
                 const profileRate = customProfileItem 
                   ? customProfileItem.price 
-                  : (prices.profilePrices[room.profileType as keyof typeof prices.profilePrices] || DEFAULT_PRICE_LIST.profilePrices.standard_alu);
+                  : (roomPrices.profilePrices[room.profileType as keyof typeof roomPrices.profilePrices] || DEFAULT_PRICE_LIST.profilePrices.standard_alu);
                 const profileTotal = cost.profileCost || Math.round(room.perimeter * profileRate);
 
                 const extraCorners = Math.max(0, (room.cornersCount || 4) - 4);
-                const extraCornersCost = extraCorners * prices.extraCornerCost;
+                const extraCornersCost = extraCorners * roomPrices.extraCornerCost;
 
-                const chandelierCost = (opt.chandeliersCount || 0) * prices.chandelierInstallation;
-                const spotsCost = (opt.spotsGX53Count || 0) * prices.spotInstallation;
-                const lightLinesCost = (opt.lightLinesMeters || 0) * prices.lightLinePerMeter;
-                const pipesCost = (opt.pipePassCount || 0) * prices.pipePass;
-                const curtainNicheCost = (opt.curtainNicheMeters || 0) * prices.curtainNichePerMeter;
-                const hardWallCost = (opt.hardWallMeters || 0) * prices.hardWallPerMeter;
+                const chandelierCost = (opt.chandeliersCount || 0) * roomPrices.chandelierInstallation;
+                const spotsCost = (opt.spotsGX53Count || 0) * roomPrices.spotInstallation;
+                const lightLinesCost = (opt.lightLinesMeters || 0) * roomPrices.lightLinePerMeter;
+                const pipesCost = (opt.pipePassCount || 0) * roomPrices.pipePass;
+                const curtainNicheCost = (opt.curtainNicheMeters || 0) * roomPrices.curtainNichePerMeter;
+                const hardWallCost = (opt.hardWallMeters || 0) * roomPrices.hardWallPerMeter;
 
                 let rowNum = 1;
 
@@ -479,7 +489,7 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
                           {roomIdx + 1}. {room.name || 'Приміщення'}
                         </h3>
                         <p className="text-[11px] text-gray-600">
-                          {getMaterialLabel(room.materialType, locale, prices)} {room.canvasBrand ? `(${room.canvasBrand})` : ''} · {getProfileLabel(room.profileType, locale, prices)}
+                          {getMaterialLabel(room.materialType, locale, roomPrices)} {room.canvasBrand ? `(${room.canvasBrand})` : ''} · {getProfileLabel(room.profileType, locale, roomPrices)}
                         </p>
                       </div>
                       <div className="text-xs font-mono font-bold text-black">
@@ -537,7 +547,7 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
                           <tr>
                             <td className="py-1 px-2 text-center text-gray-500">{rowNum++}</td>
                             <td className="py-1 px-2">
-                              Полотно натяжної стелі ({getMaterialLabel(room.materialType, locale, prices)}{room.canvasColor ? `, ${room.canvasColor}` : ''})
+                              Полотно натяжної стелі ({getMaterialLabel(room.materialType, locale, roomPrices)}{room.canvasColor ? `, ${room.canvasColor}` : ''})
                             </td>
                             <td className="py-1 px-2 text-center font-mono">{room.area}</td>
                             <td className="py-1 px-2 text-center">м²</td>
@@ -549,7 +559,7 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
                           <tr>
                             <td className="py-1 px-2 text-center text-gray-500">{rowNum++}</td>
                             <td className="py-1 px-2">
-                              Профіль кріплення та монтаж ({getProfileLabel(room.profileType, locale, prices)})
+                              Профіль кріплення та монтаж ({getProfileLabel(room.profileType, locale, roomPrices)})
                             </td>
                             <td className="py-1 px-2 text-center font-mono">{room.perimeter}</td>
                             <td className="py-1 px-2 text-center">м.п.</td>
@@ -564,7 +574,7 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
                               <td className="py-1 px-2">Обробка додаткових кутів (понад 4 шт)</td>
                               <td className="py-1 px-2 text-center font-mono">{extraCorners}</td>
                               <td className="py-1 px-2 text-center">шт</td>
-                              <td className="py-1 px-2 text-right font-mono">{prices.extraCornerCost}</td>
+                              <td className="py-1 px-2 text-right font-mono">{roomPrices.extraCornerCost}</td>
                               <td className="py-1 px-2 text-right font-mono font-semibold">{extraCornersCost}</td>
                             </tr>
                           )}
@@ -576,7 +586,7 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
                               <td className="py-1 px-2">Монтаж люстри (закладна + гак/планка)</td>
                               <td className="py-1 px-2 text-center font-mono">{opt.chandeliersCount}</td>
                               <td className="py-1 px-2 text-center">шт</td>
-                              <td className="py-1 px-2 text-right font-mono">{prices.chandelierInstallation}</td>
+                              <td className="py-1 px-2 text-right font-mono">{roomPrices.chandelierInstallation}</td>
                               <td className="py-1 px-2 text-right font-mono font-semibold">{chandelierCost}</td>
                             </tr>
                           )}
@@ -588,7 +598,7 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
                               <td className="py-1 px-2">Монтаж точкового світильника (стійка, розводка)</td>
                               <td className="py-1 px-2 text-center font-mono">{opt.spotsGX53Count}</td>
                               <td className="py-1 px-2 text-center">шт</td>
-                              <td className="py-1 px-2 text-right font-mono">{prices.spotInstallation}</td>
+                              <td className="py-1 px-2 text-right font-mono">{roomPrices.spotInstallation}</td>
                               <td className="py-1 px-2 text-right font-mono font-semibold">{spotsCost}</td>
                             </tr>
                           )}
@@ -600,7 +610,7 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
                               <td className="py-1 px-2">Світлова лінія зі світлодіодною стрічкою</td>
                               <td className="py-1 px-2 text-center font-mono">{opt.lightLinesMeters}</td>
                               <td className="py-1 px-2 text-center">м.п.</td>
-                              <td className="py-1 px-2 text-right font-mono">{prices.lightLinePerMeter}</td>
+                              <td className="py-1 px-2 text-right font-mono">{roomPrices.lightLinePerMeter}</td>
                               <td className="py-1 px-2 text-right font-mono font-semibold">{lightLinesCost}</td>
                             </tr>
                           )}
@@ -612,7 +622,7 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
                               <td className="py-1 px-2">Обвід труби опалення (термокільце)</td>
                               <td className="py-1 px-2 text-center font-mono">{opt.pipePassCount}</td>
                               <td className="py-1 px-2 text-center">шт</td>
-                              <td className="py-1 px-2 text-right font-mono">{prices.pipePass}</td>
+                              <td className="py-1 px-2 text-right font-mono">{roomPrices.pipePass}</td>
                               <td className="py-1 px-2 text-right font-mono font-semibold">{pipesCost}</td>
                             </tr>
                           )}
@@ -624,7 +634,7 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
                               <td className="py-1 px-2">Ніша під карниз для штор</td>
                               <td className="py-1 px-2 text-center font-mono">{opt.curtainNicheMeters}</td>
                               <td className="py-1 px-2 text-center">м.п.</td>
-                              <td className="py-1 px-2 text-right font-mono">{prices.curtainNichePerMeter}</td>
+                              <td className="py-1 px-2 text-right font-mono">{roomPrices.curtainNichePerMeter}</td>
                               <td className="py-1 px-2 text-right font-mono font-semibold">{curtainNicheCost}</td>
                             </tr>
                           )}
@@ -636,7 +646,7 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
                               <td className="py-1 px-2">Свердління керамограніту/плитки</td>
                               <td className="py-1 px-2 text-center font-mono">{opt.hardWallMeters}</td>
                               <td className="py-1 px-2 text-center">м.п.</td>
-                              <td className="py-1 px-2 text-right font-mono">{prices.hardWallPerMeter}</td>
+                              <td className="py-1 px-2 text-right font-mono">{roomPrices.hardWallPerMeter}</td>
                               <td className="py-1 px-2 text-right font-mono font-semibold">{hardWallCost}</td>
                             </tr>
                           )}

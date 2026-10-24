@@ -18,7 +18,9 @@ import {
   ExternalLink,
   SlidersHorizontal,
   Hash,
-  Printer
+  Printer,
+  RotateCw,
+  Lock
 } from 'lucide-react';
 import { 
   RoomMeasurement, 
@@ -27,6 +29,7 @@ import {
   CeilingComplexity, 
   ProfileType, 
   MasterPriceList,
+  MasterProfile,
   ObjectProject,
   Client
 } from '../types/database';
@@ -37,6 +40,7 @@ import {
   getComplexityLabel, 
   getProfileLabel 
 } from '../utils/calculator';
+import { generateEstimateDocNumber } from '../utils/documentNumber';
 import { TouchBlueprintEditor } from './TouchBlueprintEditor';
 import { RoomBlueprint } from './RoomBlueprint';
 import { PhotoUploader } from './PhotoUploader';
@@ -52,6 +56,7 @@ interface MeasurementEditorProps {
   allObjects?: ObjectProject[];
   allClients?: Client[];
   priceList: MasterPriceList;
+  masterProfile?: MasterProfile;
   t: Translations;
   locale: Locale;
   currencySymbol: string;
@@ -90,6 +95,7 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
   allObjects = [],
   allClients = [],
   priceList,
+  masterProfile,
   t,
   locale,
   currencySymbol,
@@ -100,6 +106,18 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
   const [isPrintModalOpen, setIsPrintModalOpen] = useState<boolean>(false);
   const activeObject = allObjects.find((o) => o.id === currentObjectId) || parentObject;
   const activeClient = allClients.find((c) => c.id === activeObject?.clientId);
+
+  // Active price list: uses initialMeasurement.priceSnapshot if present, otherwise current priceList
+  const [activePriceList, setActivePriceList] = useState<MasterPriceList>(() => {
+    return initialMeasurement?.priceSnapshot || priceList;
+  });
+  const [isPriceRecalculated, setIsPriceRecalculated] = useState<boolean>(false);
+
+  const handleRecalculatePrices = () => {
+    setActivePriceList(priceList);
+    setIsPriceRecalculated(true);
+  };
+
   const [name, setName] = useState(
     initialMeasurement?.name || (locale === 'en' ? 'Living Room' : locale === 'ru' ? 'Гостиная' : 'Вітальня')
   );
@@ -131,7 +149,7 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
   // Touch editor mode toggle
   const [isTouchEditMode, setIsTouchEditMode] = useState<boolean>(true);
 
-  // Compute available canvases: standard without deletedStandardKeys + customItems
+  // Compute available canvases: standard without deletedStandardKeys + customItems from activePriceList
   const availableCanvases = [
     { id: 'pvc_matte', label: t.pvcMatte },
     { id: 'pvc_glossy', label: t.pvcGlossy },
@@ -140,14 +158,14 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
     { id: 'fireproof_km2', label: t.fireproofKM2 },
     { id: 'acoustic', label: t.acoustic },
   ]
-    .filter((mat) => !(priceList.deletedStandardKeys || []).includes(mat.id))
+    .filter((mat) => !(activePriceList.deletedStandardKeys || []).includes(mat.id))
     .concat(
-      (priceList.customItems || [])
+      (activePriceList.customItems || [])
         .filter((i) => i.category === 'canvas')
         .map((i) => ({ id: i.id, label: i.name }))
     );
 
-  // Compute available profiles: standard without deletedStandardKeys + customItems
+  // Compute available profiles: standard without deletedStandardKeys + customItems from activePriceList
   const availableProfiles = [
     { id: 'standard_alu', label: t.profileStandardAlu },
     { id: 'pvc', label: t.profilePVC },
@@ -155,9 +173,9 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
     { id: 'floating_led', label: t.profileFloating },
     { id: 'slott_tracks', label: t.profileSlott },
   ]
-    .filter((prof) => !(priceList.deletedStandardKeys || []).includes(prof.id))
+    .filter((prof) => !(activePriceList.deletedStandardKeys || []).includes(prof.id))
     .concat(
-      (priceList.customItems || [])
+      (activePriceList.customItems || [])
         .filter((i) => i.category === 'profile')
         .map((i) => ({ id: i.id, label: i.name }))
     );
@@ -195,7 +213,7 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
     return map;
   });
 
-  const customOptionsList = (priceList.customItems || [])
+  const customOptionsList = (activePriceList.customItems || [])
     .filter((i) => i.category === 'work' || i.category === 'option')
     .map((i) => ({
       id: i.id,
@@ -229,7 +247,7 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
   const effectivePerimeter = isManualAreaPerimeter ? manualPerimeter : computedGeometry.perimeter;
   const effectiveCorners = isManualAreaPerimeter ? manualCorners : computedGeometry.cornersCount;
 
-  // Cost calculation
+  // Cost calculation using active price list (price snapshot)
   const costDetails = calculateCeilingCost({
     area: effectiveArea,
     perimeter: effectivePerimeter,
@@ -238,7 +256,7 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
     profileType,
     options,
     customOptions: customOptionsList,
-    priceList,
+    priceList: activePriceList,
   });
 
   const handleAddCommentTag = (tag: string) => {
@@ -307,6 +325,12 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
       comments,
       photos,
       costDetails,
+      docNumber: initialMeasurement?.docNumber || generateEstimateDocNumber(
+        new Date(),
+        masterProfile?.masterName,
+        masterProfile?.companyName
+      ),
+      priceSnapshot: activePriceList,
       updatedAt: new Date().toISOString(),
     };
 
@@ -1077,6 +1101,44 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
           </div>
         )}
 
+        {/* Price list snapshot info and explicit recalculation button */}
+        {initialMeasurement?.id && (
+          <div className="pt-2 border-t border-cyan-100 dark:border-slate-800">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 text-xs">
+              <div className="flex items-center gap-2">
+                <span className={`p-1.5 rounded-lg shrink-0 ${isPriceRecalculated ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300'}`}>
+                  {isPriceRecalculated ? <Check className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
+                </span>
+                <div>
+                  <span className="font-bold text-slate-800 dark:text-slate-200 block">
+                    {isPriceRecalculated 
+                      ? 'Застосовано актуальний прайс-лист' 
+                      : 'Ціни зафіксовано на момент збереження'}
+                  </span>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                    {isPriceRecalculated 
+                      ? 'Вартість перераховано за новими тарифами з налаштувань' 
+                      : 'Зміна цін у налаштуваннях не змінює вартість цього заміру'}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleRecalculatePrices}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 shrink-0 ${
+                  isPriceRecalculated
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'bg-white hover:bg-cyan-50 dark:bg-slate-900 dark:hover:bg-slate-800 text-cyan-700 dark:text-cyan-300 border border-cyan-300 dark:border-cyan-700 shadow-xs'
+                }`}
+              >
+                <RotateCw className={`w-3.5 h-3.5 ${isPriceRecalculated ? '' : 'text-cyan-600 dark:text-cyan-400'}`} />
+                <span>{isPriceRecalculated ? 'Оновлено до нового прайсу' : 'Перерахувати за актуальним прайсом'}</span>
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="flex gap-2 mt-2">
           <button
             type="button"
@@ -1132,11 +1194,14 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
             comments,
             photos,
             costDetails,
+            docNumber: initialMeasurement?.docNumber,
+            priceSnapshot: activePriceList,
             updatedAt: new Date().toISOString(),
           }}
           parentObject={activeObject}
           client={activeClient}
-          priceList={priceList}
+          masterProfile={masterProfile}
+          priceList={activePriceList}
           currencySymbol={currencySymbol}
           t={t}
           locale={locale}

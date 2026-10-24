@@ -94,6 +94,8 @@ export interface RoomMeasurement {
   comments: string;               // Текстовые комментарии и примечания по замеру
   photos: MeasurementPhoto[];     // Фотографии объекта
   costDetails: CostBreakdown;
+  docNumber?: string;             // Постійний номер кошторису (наприклад, "261022-АО-1941")
+  priceSnapshot?: MasterPriceList;// Снепшот прайс-листа на момент збереження (для фіксації цін)
   updatedAt: string;
 }
 
@@ -119,6 +121,7 @@ export interface ObjectProject {
   
   prepayment: number;             // Внесенный аванс (руб)
   discountPercent?: number;       // Скидка (%)
+  docNumber?: string;             // Постійний номер кошторису для об'єкта
   notes?: string;                 // Примечания к объекту
   createdAt: string;
   updatedAt: string;

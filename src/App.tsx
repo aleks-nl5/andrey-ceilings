@@ -25,6 +25,7 @@ import {
 } from './types/database';
 import { AppStorage } from './db/storage';
 import { calculateCeilingCost } from './utils/calculator';
+import { generateEstimateDocNumber } from './utils/documentNumber';
 import { MasterDashboard } from './components/MasterDashboard';
 import { ClientObjectManager } from './components/ClientObjectManager';
 import { MeasurementEditor } from './components/MeasurementEditor';
@@ -315,6 +316,7 @@ export default function App() {
     const newObjectId = `obj-${Date.now()}`;
     const newObject: ObjectProject = {
       id: newObjectId,
+      docNumber: generateEstimateDocNumber(new Date(), masterProfile?.masterName, masterProfile?.companyName),
       clientId: newClientId,
       address: data.object.address,
       roomType: data.object.roomType,
@@ -352,7 +354,12 @@ export default function App() {
   };
 
   const handleSaveMeasurement = (measurement: RoomMeasurement) => {
-    AppStorage.saveMeasurement(measurement);
+    const measWithDocAndPrice: RoomMeasurement = {
+      ...measurement,
+      docNumber: measurement.docNumber || generateEstimateDocNumber(new Date(), masterProfile?.masterName, masterProfile?.companyName),
+      priceSnapshot: measurement.priceSnapshot || priceList,
+    };
+    AppStorage.saveMeasurement(measWithDocAndPrice);
     handleExitMeasurementEditor();
     refreshData();
   };
@@ -402,6 +409,8 @@ export default function App() {
 
     const newMeas: RoomMeasurement = {
       id: `meas-${Date.now()}`,
+      docNumber: generateEstimateDocNumber(new Date(), masterProfile?.masterName, masterProfile?.companyName),
+      priceSnapshot: priceList,
       objectId: data.objectId,
       name: data.roomName,
       shape: 'rectangle',
@@ -556,6 +565,7 @@ export default function App() {
                 allObjects={objects}
                 allClients={clients}
                 priceList={priceList}
+                masterProfile={masterProfile}
                 t={t}
                 locale={locale}
                 currencySymbol={currencySymbol}
