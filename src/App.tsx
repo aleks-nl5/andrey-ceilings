@@ -39,6 +39,7 @@ import { SecurityStorage } from './utils/security';
 import { usePWAInstall } from './hooks/usePWAInstall';
 import { useTheme } from './hooks/useTheme';
 import { Locale, TRANSLATIONS, getInitialLocale, saveLocale } from './i18n/translations';
+import { getRegion, getCurrencyInfo, CurrencyCode } from './utils/regionSettings';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'objects' | 'measurements' | 'calculator' | 'settings'>('dashboard');
@@ -49,7 +50,15 @@ export default function App() {
   // Multilingual state (Default: Ukraine / 'uk')
   const [locale, setLocale] = useState<Locale>(getInitialLocale());
   const t = TRANSLATIONS[locale] || TRANSLATIONS.uk;
-  const currencySymbol = t.currency || '₴';
+
+  // Independent Region & Currency states
+  const [selectedRegionCode, setSelectedRegionCode] = useState<string>(() => AppStorage.getRegionCode());
+  const [selectedCurrencyCode, setSelectedCurrencyCode] = useState<CurrencyCode>(() => AppStorage.getCurrencyCode());
+
+  const currentRegion = getRegion(selectedRegionCode);
+  const currentCurrency = getCurrencyInfo(selectedCurrencyCode);
+  const currencySymbol = currentCurrency.symbol;
+  const currentPhoneCode = currentRegion.phoneCode;
 
   // Data states
   const [clients, setClients] = useState<Client[]>([]);
@@ -178,11 +187,23 @@ export default function App() {
     setMeasurements(AppStorage.getMeasurements());
     setPriceList(AppStorage.getPriceList());
     setMasterProfile(AppStorage.getMasterProfile());
+    setSelectedRegionCode(AppStorage.getRegionCode());
+    setSelectedCurrencyCode(AppStorage.getCurrencyCode());
   };
 
   const handleLanguageChange = (newLocale: Locale) => {
     setLocale(newLocale);
     saveLocale(newLocale);
+  };
+
+  const handleRegionChange = (newRegionCode: string) => {
+    setSelectedRegionCode(newRegionCode);
+    AppStorage.saveRegionCode(newRegionCode);
+  };
+
+  const handleCurrencyChange = (newCurrencyCode: CurrencyCode) => {
+    setSelectedCurrencyCode(newCurrencyCode);
+    AppStorage.saveCurrencyCode(newCurrencyCode);
   };
 
   // Navigation helpers that maintain browser history stack for hardware Back button
@@ -513,6 +534,7 @@ export default function App() {
             t={t}
             locale={locale}
             currencySymbol={currencySymbol}
+            phoneCode={currentPhoneCode}
             onSaveClient={handleSaveClient}
             onDeleteClient={handleDeleteClient}
             onSaveObject={handleSaveObject}
@@ -687,9 +709,13 @@ export default function App() {
             t={t}
             locale={locale}
             currencySymbol={currencySymbol}
+            regionCode={selectedRegionCode}
+            currencyCode={selectedCurrencyCode}
             theme={theme}
             onChangeTheme={setTheme}
             onChangeLocale={handleLanguageChange}
+            onChangeRegion={handleRegionChange}
+            onChangeCurrency={handleCurrencyChange}
             onSavePriceList={handleSavePriceList}
             onSaveMasterProfile={handleSaveMasterProfile}
             onResetData={handleResetData}
@@ -736,6 +762,7 @@ export default function App() {
           onClose={handleCloseNewMeasurementModal}
           objects={objects}
           clients={clients}
+          phoneCode={currentPhoneCode}
           onSelectObject={handleSelectObjectFromModal}
           onCreateNewObjectAndMeasure={handleCreateNewObjectAndMeasure}
           t={t}

@@ -46,6 +46,7 @@ interface ClientObjectManagerProps {
   t: Translations;
   locale: Locale;
   currencySymbol: string;
+  phoneCode?: string;
   selectedObjectId?: string | null;
   onSelectObjectId?: (id: string | null) => void;
   masterProfile?: MasterProfile;
@@ -66,6 +67,7 @@ export const ClientObjectManager: React.FC<ClientObjectManagerProps> = ({
   t,
   locale,
   currencySymbol,
+  phoneCode = '+380',
   selectedObjectId,
   onSelectObjectId,
   masterProfile,
@@ -163,7 +165,7 @@ export const ClientObjectManager: React.FC<ClientObjectManagerProps> = ({
   const openNewClientModal = () => {
     setEditingClient(null);
     setClientName('');
-    setClientPhone('');
+    setClientPhone(phoneCode ? `${phoneCode} ` : '');
     setClientEmail('');
     setClientAddress('');
     setClientNotes('');
@@ -1001,7 +1003,7 @@ export const ClientObjectManager: React.FC<ClientObjectManagerProps> = ({
                   required
                   value={clientPhone}
                   onChange={(e) => setClientPhone(e.target.value)}
-                  placeholder="+380 (67) 000-00-00"
+                  placeholder={phoneCode ? `${phoneCode} ...` : '+380 (67) 000-00-00'}
                   className="w-full mt-1 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-cyan-500 font-mono"
                 />
               </div>

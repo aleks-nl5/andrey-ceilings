@@ -7,12 +7,16 @@ import {
 } from '../types/database';
 import { DEFAULT_PRICE_LIST } from '../utils/calculator';
 
+import { CurrencyCode } from '../utils/regionSettings';
+
 const STORAGE_KEYS = {
   CLIENTS: 'potolok_pro_clients_v2_ua',
   OBJECTS: 'potolok_pro_objects_v2_ua',
   MEASUREMENTS: 'potolok_pro_measurements_v2_ua',
   PRICE_LIST: 'potolok_pro_pricelist_v2_ua',
   MASTER_PROFILE: 'potolok_pro_master_profile_v2_ua',
+  REGION_CODE: 'potolok_pro_region_code_v1',
+  CURRENCY_CODE: 'potolok_pro_currency_code_v1',
 };
 
 // Initial realistic demo seed data for Ukraine region
@@ -315,6 +319,26 @@ export class AppStorage {
     localStorage.setItem(STORAGE_KEYS.MASTER_PROFILE, JSON.stringify(profile));
   }
 
+  static getRegionCode(): string {
+    return localStorage.getItem(STORAGE_KEYS.REGION_CODE) || 'UA';
+  }
+
+  static saveRegionCode(code: string): void {
+    localStorage.setItem(STORAGE_KEYS.REGION_CODE, code);
+  }
+
+  static getCurrencyCode(): CurrencyCode {
+    const code = localStorage.getItem(STORAGE_KEYS.CURRENCY_CODE);
+    if (code === 'USD' || code === 'EUR' || code === 'UAH') {
+      return code;
+    }
+    return 'UAH';
+  }
+
+  static saveCurrencyCode(code: CurrencyCode): void {
+    localStorage.setItem(STORAGE_KEYS.CURRENCY_CODE, code);
+  }
+
   static exportFullBackup(): string {
     const backup = {
       version: '2.0-ua',
@@ -324,6 +348,8 @@ export class AppStorage {
       measurements: this.getMeasurements(),
       priceList: this.getPriceList(),
       masterProfile: this.getMasterProfile(),
+      regionCode: this.getRegionCode(),
+      currencyCode: this.getCurrencyCode(),
     };
     return JSON.stringify(backup, null, 2);
   }
@@ -345,6 +371,12 @@ export class AppStorage {
       }
       if (parsed.masterProfile) {
         localStorage.setItem(STORAGE_KEYS.MASTER_PROFILE, JSON.stringify(parsed.masterProfile));
+      }
+      if (parsed.regionCode && typeof parsed.regionCode === 'string') {
+        this.saveRegionCode(parsed.regionCode);
+      }
+      if (parsed.currencyCode && (parsed.currencyCode === 'USD' || parsed.currencyCode === 'EUR' || parsed.currencyCode === 'UAH')) {
+        this.saveCurrencyCode(parsed.currencyCode);
       }
       return true;
     } catch (e) {

@@ -39,6 +39,7 @@ import { Translations, Locale } from '../i18n/translations';
 import { ThemeMode } from '../hooks/useTheme';
 import { SecurityStorage, SecuritySettings, isBiometricsAvailable, registerAndVerifyBiometrics } from '../utils/security';
 import { PinSetupModal } from './PinSetupModal';
+import { SUPPORTED_REGIONS, SUPPORTED_CURRENCIES, CurrencyCode, getRegion } from '../utils/regionSettings';
 
 interface PriceListSettingsProps {
   priceList: MasterPriceList;
@@ -47,8 +48,12 @@ interface PriceListSettingsProps {
   locale: Locale;
   currencySymbol: string;
   theme: ThemeMode;
+  regionCode?: string;
+  currencyCode?: CurrencyCode;
   onChangeTheme: (theme: ThemeMode) => void;
   onChangeLocale: (locale: Locale) => void;
+  onChangeRegion?: (regionCode: string) => void;
+  onChangeCurrency?: (currencyCode: CurrencyCode) => void;
   onSavePriceList: (priceList: MasterPriceList) => void;
   onSaveMasterProfile: (profile: MasterProfile) => void;
   onResetData: () => void;
@@ -62,8 +67,12 @@ export const PriceListSettings: React.FC<PriceListSettingsProps> = ({
   locale,
   currencySymbol,
   theme,
+  regionCode = 'UA',
+  currencyCode = 'UAH',
   onChangeTheme,
   onChangeLocale,
+  onChangeRegion,
+  onChangeCurrency,
   onSavePriceList,
   onResetData,
   onSaveMasterProfile,
@@ -379,7 +388,7 @@ export const PriceListSettings: React.FC<PriceListSettingsProps> = ({
           <span>Тема оформлення, мова та регіон</span>
         </h3>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Theme selector */}
           <div>
             <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1.5">
@@ -440,21 +449,76 @@ export const PriceListSettings: React.FC<PriceListSettingsProps> = ({
             </div>
           </div>
 
-          {/* Region */}
+          {/* Region / Country with auto-updating phone code */}
           <div>
-            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1.5 flex items-center gap-1.5">
-              <Coins className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-              <span>Регіон та валюта:</span>
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1.5 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Globe className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+                <span>Країна (код тел.):</span>
+              </span>
+              <span className="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded bg-cyan-100 dark:bg-cyan-950 text-cyan-800 dark:text-cyan-300">
+                {getRegion(regionCode).phoneCode}
+              </span>
             </label>
-            <div className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl p-2.5 text-xs space-y-1">
-              <div className="flex justify-between items-center text-slate-800 dark:text-slate-200 font-semibold">
-                <span>Основний регіон:</span>
-                <span className="text-cyan-700 dark:text-cyan-400 font-bold">Україна (₴)</span>
+            <div className="space-y-1.5">
+              <div className="relative">
+                <select
+                  value={regionCode}
+                  onChange={(e) => onChangeRegion && onChangeRegion(e.target.value)}
+                  className="w-full text-xs font-semibold py-2 px-2.5 rounded-xl border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 focus:outline-hidden focus:ring-2 focus:ring-cyan-500 appearance-none cursor-pointer pr-7"
+                >
+                  {SUPPORTED_REGIONS.map((r) => (
+                    <option key={r.code} value={r.code} className="dark:bg-slate-900">
+                      {r.flag} {r.name} ({r.phoneCode})
+                    </option>
+                  ))}
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
               </div>
-              <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                Телефонний код +380, розрахунки у гривнях (UAH).
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight">
+                Автоматично підставляє код <strong className="text-cyan-700 dark:text-cyan-400">{getRegion(regionCode).phoneCode}</strong> для нових клієнтів.
               </p>
             </div>
+          </div>
+
+          {/* Independent Currency Selector (USD / EUR / UAH) */}
+          <div>
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1.5 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Coins className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                <span>Валюта розрахунків:</span>
+              </span>
+              <span className="text-[10px] font-black font-mono px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300">
+                {currencySymbol}
+              </span>
+            </label>
+            <div className="grid grid-cols-3 gap-1.5">
+              {SUPPORTED_CURRENCIES.map((cur) => {
+                const isSelected = currencyCode === cur.code;
+                return (
+                  <button
+                    key={cur.code}
+                    type="button"
+                    onClick={() => onChangeCurrency && onChangeCurrency(cur.code)}
+                    className={`p-2 rounded-xl border text-center transition flex flex-col items-center justify-center gap-0.5 ${
+                      isSelected
+                        ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-200 font-bold ring-1 ring-amber-500 shadow-sm'
+                        : 'border-slate-300 bg-white dark:border-slate-800 dark:bg-slate-950 text-slate-600 dark:text-slate-400 hover:border-slate-400 dark:hover:border-slate-700'
+                    }`}
+                  >
+                    <span className="text-base font-black font-mono">{cur.symbol}</span>
+                    <span className="text-[10px] font-semibold">{cur.code}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1.5 leading-tight">
+              Символ <strong className="text-amber-700 dark:text-amber-400">{currencySymbol}</strong> замінює валюту в додатку та в PDF-кошторисі.
+            </p>
           </div>
         </div>
       </div>

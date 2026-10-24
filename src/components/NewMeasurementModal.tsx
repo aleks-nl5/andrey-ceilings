@@ -20,6 +20,7 @@ interface NewMeasurementModalProps {
   onClose: () => void;
   objects: ObjectProject[];
   clients: Client[];
+  phoneCode?: string;
   onSelectObject: (objectId: string) => void;
   onCreateNewObjectAndMeasure: (data: {
     client: { name: string; phone: string; address?: string };
@@ -34,6 +35,7 @@ export const NewMeasurementModal: React.FC<NewMeasurementModalProps> = ({
   onClose,
   objects,
   clients,
+  phoneCode = '+380',
   onSelectObject,
   onCreateNewObjectAndMeasure,
   t,
@@ -52,7 +54,15 @@ export const NewMeasurementModal: React.FC<NewMeasurementModalProps> = ({
   );
   const [selectedExistingClientId, setSelectedExistingClientId] = useState<string>(clients[0]?.id || '');
   const [clientName, setClientName] = useState<string>('');
-  const [clientPhone, setClientPhone] = useState<string>('');
+  const [clientPhone, setClientPhone] = useState<string>(phoneCode ? `${phoneCode} ` : '');
+
+  React.useEffect(() => {
+    if (isOpen && (clientSelectionMode === 'new' || clients.length === 0)) {
+      if (!clientPhone || clientPhone.trim() === '') {
+        setClientPhone(phoneCode ? `${phoneCode} ` : '');
+      }
+    }
+  }, [isOpen, clientSelectionMode, phoneCode, clients.length]);
   const [objectAddress, setObjectAddress] = useState<string>('');
   const [roomType, setRoomType] = useState<string>('Квартира');
   const [measureDate, setMeasureDate] = useState<string>(
@@ -420,7 +430,7 @@ export const NewMeasurementModal: React.FC<NewMeasurementModalProps> = ({
                       <Phone className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
                       <input
                         type="tel"
-                        placeholder="+380 (97) 123-45-67"
+                        placeholder={phoneCode ? `${phoneCode} ...` : '+380 (97) 123-45-67'}
                         value={clientPhone}
                         onChange={(e) => setClientPhone(e.target.value)}
                         className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-cyan-600 shadow-sm"
