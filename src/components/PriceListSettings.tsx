@@ -704,19 +704,19 @@ export const PriceListSettings: React.FC<PriceListSettingsProps> = ({
             ]
               .filter((mat) => !(prices.deletedStandardKeys || []).includes(mat.key))
               .map((mat) => (
-                <div key={mat.key} className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                  <span className="text-xs font-medium text-slate-800 dark:text-slate-200 truncate flex-1 min-w-0" title={mat.label}>
+                <div key={mat.key} className="flex items-center justify-between gap-2.5 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 min-h-[44px]">
+                  <span className="text-xs font-medium text-slate-800 dark:text-slate-200 flex-1 min-w-0 break-words leading-tight py-0.5" title={mat.label}>
                     {mat.label}
                   </span>
-                  <div className="flex items-center gap-1 shrink-0">
+                  <div className="flex items-center gap-1.5 shrink-0">
                     <div className="relative flex items-center">
                       <input
                         type="number"
                         value={prices.canvasPrices[mat.key as MaterialType] || 0}
                         onChange={(e) => handlePriceChange('canvasPrices', mat.key, e.target.value)}
-                        className="w-20 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg pl-2 pr-6 py-1 text-xs font-mono font-bold text-slate-900 dark:text-white text-right"
+                        className="w-24 sm:w-28 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg pl-2 pr-11 py-1 text-xs font-mono font-bold text-slate-900 dark:text-white text-right focus:outline-hidden focus:ring-1 focus:ring-cyan-500"
                       />
-                      <span className="absolute right-1.5 text-[10px] text-slate-400 pointer-events-none font-medium">{currencySymbol}/м²</span>
+                      <span className="absolute right-1.5 text-[10px] text-slate-400 pointer-events-none font-medium whitespace-nowrap select-none">{currencySymbol}/м²</span>
                     </div>
                     <button
                       type="button"
@@ -732,11 +732,11 @@ export const PriceListSettings: React.FC<PriceListSettingsProps> = ({
 
             {/* Custom Canvases */}
             {(prices.customItems || []).filter((i) => i.category === 'canvas').map((item) => (
-              <div key={item.id} className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-cyan-50/50 dark:bg-cyan-950/20 border border-cyan-200 dark:border-cyan-800">
-                <span className="text-xs font-bold text-cyan-900 dark:text-cyan-300 truncate flex-1 min-w-0" title={item.name}>
+              <div key={item.id} className="flex items-center justify-between gap-2.5 px-3 py-1.5 rounded-xl bg-cyan-50/50 dark:bg-cyan-950/20 border border-cyan-200 dark:border-cyan-800 min-h-[44px]">
+                <span className="text-xs font-bold text-cyan-900 dark:text-cyan-300 flex-1 min-w-0 break-words leading-tight py-0.5" title={item.name}>
                   {item.name}
                 </span>
-                <div className="flex items-center gap-1 shrink-0">
+                <div className="flex items-center gap-1.5 shrink-0">
                   <div className="relative flex items-center">
                     <input
                       type="number"
@@ -746,9 +746,9 @@ export const PriceListSettings: React.FC<PriceListSettingsProps> = ({
                         const next = (prices.customItems || []).map((ci) => ci.id === item.id ? { ...ci, price: p } : ci);
                         setPrices({ ...prices, customItems: next });
                       }}
-                      className="w-20 bg-white dark:bg-slate-900 border border-cyan-300 dark:border-cyan-700 rounded-lg pl-2 pr-6 py-1 text-xs font-mono font-bold text-slate-900 dark:text-white text-right"
+                      className="w-24 sm:w-28 bg-white dark:bg-slate-900 border border-cyan-300 dark:border-cyan-700 rounded-lg pl-2 pr-11 py-1 text-xs font-mono font-bold text-slate-900 dark:text-white text-right focus:outline-hidden focus:ring-1 focus:ring-cyan-500"
                     />
-                    <span className="absolute right-1.5 text-[10px] text-slate-400 pointer-events-none font-medium">{currencySymbol}/{item.unit}</span>
+                    <span className="absolute right-1.5 text-[10px] text-slate-400 pointer-events-none font-medium whitespace-nowrap select-none">{currencySymbol}/{item.unit}</span>
                   </div>
                   <button
                     type="button"
@@ -810,19 +810,19 @@ export const PriceListSettings: React.FC<PriceListSettingsProps> = ({
             ]
               .filter((prof) => !(prices.deletedStandardKeys || []).includes(prof.key))
               .map((prof) => (
-                <div key={prof.key} className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                  <span className="text-xs font-medium text-slate-800 dark:text-slate-200 truncate flex-1 min-w-0" title={prof.label}>
+                <div key={prof.key} className="flex items-center justify-between gap-2.5 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 min-h-[44px]">
+                  <span className="text-xs font-medium text-slate-800 dark:text-slate-200 flex-1 min-w-0 break-words leading-tight py-0.5" title={prof.label}>
                     {prof.label}
                   </span>
-                  <div className="flex items-center gap-1 shrink-0">
+                  <div className="flex items-center gap-1.5 shrink-0">
                     <div className="relative flex items-center">
                       <input
                         type="number"
                         value={prices.profilePrices[prof.key as ProfileType] || 0}
                         onChange={(e) => handlePriceChange('profilePrices', prof.key, e.target.value)}
-                        className="w-20 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg pl-2 pr-6 py-1 text-xs font-mono font-bold text-slate-900 dark:text-white text-right"
+                        className="w-24 sm:w-28 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg pl-2 pr-11 py-1 text-xs font-mono font-bold text-slate-900 dark:text-white text-right focus:outline-hidden focus:ring-1 focus:ring-cyan-500"
                       />
-                      <span className="absolute right-1.5 text-[10px] text-slate-400 pointer-events-none font-medium">{currencySymbol}/м.п.</span>
+                      <span className="absolute right-1.5 text-[10px] text-slate-400 pointer-events-none font-medium whitespace-nowrap select-none">{currencySymbol}/м.п.</span>
                     </div>
                     <button
                       type="button"
@@ -838,11 +838,11 @@ export const PriceListSettings: React.FC<PriceListSettingsProps> = ({
 
             {/* Custom Profiles */}
             {(prices.customItems || []).filter((i) => i.category === 'profile').map((item) => (
-              <div key={item.id} className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-cyan-50/50 dark:bg-cyan-950/20 border border-cyan-200 dark:border-cyan-800">
-                <span className="text-xs font-bold text-cyan-900 dark:text-cyan-300 truncate flex-1 min-w-0" title={item.name}>
+              <div key={item.id} className="flex items-center justify-between gap-2.5 px-3 py-1.5 rounded-xl bg-cyan-50/50 dark:bg-cyan-950/20 border border-cyan-200 dark:border-cyan-800 min-h-[44px]">
+                <span className="text-xs font-bold text-cyan-900 dark:text-cyan-300 flex-1 min-w-0 break-words leading-tight py-0.5" title={item.name}>
                   {item.name}
                 </span>
-                <div className="flex items-center gap-1 shrink-0">
+                <div className="flex items-center gap-1.5 shrink-0">
                   <div className="relative flex items-center">
                     <input
                       type="number"
@@ -852,9 +852,9 @@ export const PriceListSettings: React.FC<PriceListSettingsProps> = ({
                         const next = (prices.customItems || []).map((ci) => ci.id === item.id ? { ...ci, price: p } : ci);
                         setPrices({ ...prices, customItems: next });
                       }}
-                      className="w-20 bg-white dark:bg-slate-900 border border-cyan-300 dark:border-cyan-700 rounded-lg pl-2 pr-6 py-1 text-xs font-mono font-bold text-slate-900 dark:text-white text-right"
+                      className="w-24 sm:w-28 bg-white dark:bg-slate-900 border border-cyan-300 dark:border-cyan-700 rounded-lg pl-2 pr-11 py-1 text-xs font-mono font-bold text-slate-900 dark:text-white text-right focus:outline-hidden focus:ring-1 focus:ring-cyan-500"
                     />
-                    <span className="absolute right-1.5 text-[10px] text-slate-400 pointer-events-none font-medium">{currencySymbol}/{item.unit}</span>
+                    <span className="absolute right-1.5 text-[10px] text-slate-400 pointer-events-none font-medium whitespace-nowrap select-none">{currencySymbol}/{item.unit}</span>
                   </div>
                   <button
                     type="button"
@@ -916,19 +916,19 @@ export const PriceListSettings: React.FC<PriceListSettingsProps> = ({
             ]
               .filter((work) => !(prices.deletedStandardKeys || []).includes(work.key))
               .map((work) => (
-                <div key={work.key} className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                  <span className="text-xs font-medium text-slate-800 dark:text-slate-200 truncate flex-1 min-w-0" title={work.label}>
+                <div key={work.key} className="flex items-center justify-between gap-2.5 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 min-h-[44px]">
+                  <span className="text-xs font-medium text-slate-800 dark:text-slate-200 flex-1 min-w-0 break-words leading-tight py-0.5" title={work.label}>
                     {work.label}
                   </span>
-                  <div className="flex items-center gap-1 shrink-0">
+                  <div className="flex items-center gap-1.5 shrink-0">
                     <div className="relative flex items-center">
                       <input
                         type="number"
                         value={prices[work.key as keyof MasterPriceList] as number || 0}
                         onChange={(e) => handleDirectPriceChange(work.key as keyof MasterPriceList, e.target.value)}
-                        className="w-20 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg pl-2 pr-6 py-1 text-xs font-mono font-bold text-slate-900 dark:text-white text-right"
+                        className="w-24 sm:w-28 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg pl-2 pr-11 py-1 text-xs font-mono font-bold text-slate-900 dark:text-white text-right focus:outline-hidden focus:ring-1 focus:ring-cyan-500"
                       />
-                      <span className="absolute right-1.5 text-[10px] text-slate-400 pointer-events-none font-medium">{currencySymbol}/{work.unit}</span>
+                      <span className="absolute right-1.5 text-[10px] text-slate-400 pointer-events-none font-medium whitespace-nowrap select-none">{currencySymbol}/{work.unit}</span>
                     </div>
                     <button
                       type="button"
@@ -944,11 +944,11 @@ export const PriceListSettings: React.FC<PriceListSettingsProps> = ({
 
             {/* Custom Works */}
             {(prices.customItems || []).filter((i) => i.category === 'work').map((item) => (
-              <div key={item.id} className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800">
-                <span className="text-xs font-bold text-emerald-900 dark:text-emerald-300 truncate flex-1 min-w-0" title={item.name}>
+              <div key={item.id} className="flex items-center justify-between gap-2.5 px-3 py-1.5 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 min-h-[44px]">
+                <span className="text-xs font-bold text-emerald-900 dark:text-emerald-300 flex-1 min-w-0 break-words leading-tight py-0.5" title={item.name}>
                   {item.name}
                 </span>
-                <div className="flex items-center gap-1 shrink-0">
+                <div className="flex items-center gap-1.5 shrink-0">
                   <div className="relative flex items-center">
                     <input
                       type="number"
@@ -958,9 +958,9 @@ export const PriceListSettings: React.FC<PriceListSettingsProps> = ({
                         const next = (prices.customItems || []).map((ci) => ci.id === item.id ? { ...ci, price: p } : ci);
                         setPrices({ ...prices, customItems: next });
                       }}
-                      className="w-20 bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-700 rounded-lg pl-2 pr-6 py-1 text-xs font-mono font-bold text-slate-900 dark:text-white text-right"
+                      className="w-24 sm:w-28 bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-700 rounded-lg pl-2 pr-11 py-1 text-xs font-mono font-bold text-slate-900 dark:text-white text-right focus:outline-hidden focus:ring-1 focus:ring-cyan-500"
                     />
-                    <span className="absolute right-1.5 text-[10px] text-slate-400 pointer-events-none font-medium">{currencySymbol}/{item.unit}</span>
+                    <span className="absolute right-1.5 text-[10px] text-slate-400 pointer-events-none font-medium whitespace-nowrap select-none">{currencySymbol}/{item.unit}</span>
                   </div>
                   <button
                     type="button"
@@ -1020,19 +1020,19 @@ export const PriceListSettings: React.FC<PriceListSettingsProps> = ({
             ]
               .filter((opt) => !(prices.deletedStandardKeys || []).includes(opt.key))
               .map((opt) => (
-                <div key={opt.key} className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                  <span className="text-xs font-medium text-slate-800 dark:text-slate-200 truncate flex-1 min-w-0" title={opt.label}>
+                <div key={opt.key} className="flex items-center justify-between gap-2.5 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 min-h-[44px]">
+                  <span className="text-xs font-medium text-slate-800 dark:text-slate-200 flex-1 min-w-0 break-words leading-tight py-0.5" title={opt.label}>
                     {opt.label}
                   </span>
-                  <div className="flex items-center gap-1 shrink-0">
+                  <div className="flex items-center gap-1.5 shrink-0">
                     <div className="relative flex items-center">
                       <input
                         type="number"
                         value={prices[opt.key as keyof MasterPriceList] as number || 0}
                         onChange={(e) => handleDirectPriceChange(opt.key as keyof MasterPriceList, e.target.value)}
-                        className="w-20 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg pl-2 pr-6 py-1 text-xs font-mono font-bold text-slate-900 dark:text-white text-right"
+                        className="w-24 sm:w-28 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg pl-2 pr-11 py-1 text-xs font-mono font-bold text-slate-900 dark:text-white text-right focus:outline-hidden focus:ring-1 focus:ring-cyan-500"
                       />
-                      <span className="absolute right-1.5 text-[10px] text-slate-400 pointer-events-none font-medium">{currencySymbol}/{opt.unit}</span>
+                      <span className="absolute right-1.5 text-[10px] text-slate-400 pointer-events-none font-medium whitespace-nowrap select-none">{currencySymbol}/{opt.unit}</span>
                     </div>
                     <button
                       type="button"
@@ -1048,11 +1048,11 @@ export const PriceListSettings: React.FC<PriceListSettingsProps> = ({
 
             {/* Custom Options */}
             {(prices.customItems || []).filter((i) => i.category === 'option').map((item) => (
-              <div key={item.id} className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
-                <span className="text-xs font-bold text-amber-900 dark:text-cyan-300 truncate flex-1 min-w-0" title={item.name}>
+              <div key={item.id} className="flex items-center justify-between gap-2.5 px-3 py-1.5 rounded-xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 min-h-[44px]">
+                <span className="text-xs font-bold text-amber-900 dark:text-amber-300 flex-1 min-w-0 break-words leading-tight py-0.5" title={item.name}>
                   {item.name}
                 </span>
-                <div className="flex items-center gap-1 shrink-0">
+                <div className="flex items-center gap-1.5 shrink-0">
                   <div className="relative flex items-center">
                     <input
                       type="number"
@@ -1062,9 +1062,9 @@ export const PriceListSettings: React.FC<PriceListSettingsProps> = ({
                         const next = (prices.customItems || []).map((ci) => ci.id === item.id ? { ...ci, price: p } : ci);
                         setPrices({ ...prices, customItems: next });
                       }}
-                      className="w-20 bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700 rounded-lg pl-2 pr-6 py-1 text-xs font-mono font-bold text-slate-900 dark:text-white text-right"
+                      className="w-24 sm:w-28 bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700 rounded-lg pl-2 pr-11 py-1 text-xs font-mono font-bold text-slate-900 dark:text-white text-right focus:outline-hidden focus:ring-1 focus:ring-cyan-500"
                     />
-                    <span className="absolute right-1.5 text-[10px] text-slate-400 pointer-events-none font-medium">{currencySymbol}/{item.unit}</span>
+                    <span className="absolute right-1.5 text-[10px] text-slate-400 pointer-events-none font-medium whitespace-nowrap select-none">{currencySymbol}/{item.unit}</span>
                   </div>
                   <button
                     type="button"
