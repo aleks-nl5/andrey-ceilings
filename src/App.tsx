@@ -40,7 +40,7 @@ import { SecurityStorage } from './utils/security';
 import { usePWAInstall } from './hooks/usePWAInstall';
 import { useTheme } from './hooks/useTheme';
 import { Locale, TRANSLATIONS, getInitialLocale, saveLocale } from './i18n/translations';
-import { getRegion, getCurrencyInfo, CurrencyCode } from './utils/regionSettings';
+import { getRegion, getCurrencyInfo, getCurrencySymbol, CurrencyCode } from './utils/regionSettings';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'objects' | 'measurements' | 'calculator' | 'settings'>('dashboard');
@@ -205,6 +205,14 @@ export default function App() {
   const handleCurrencyChange = (newCurrencyCode: CurrencyCode) => {
     setSelectedCurrencyCode(newCurrencyCode);
     AppStorage.saveCurrencyCode(newCurrencyCode);
+    const sym = getCurrencySymbol(newCurrencyCode);
+    const updatedPriceList: MasterPriceList = {
+      ...priceList,
+      currencyCode: newCurrencyCode,
+      currencySymbol: sym,
+    };
+    AppStorage.savePriceList(updatedPriceList);
+    setPriceList(updatedPriceList);
   };
 
   // Navigation helpers that maintain browser history stack for hardware Back button
@@ -317,6 +325,8 @@ export default function App() {
     const newObject: ObjectProject = {
       id: newObjectId,
       docNumber: generateEstimateDocNumber(new Date(), masterProfile?.masterName, masterProfile?.companyName),
+      currencyCode: selectedCurrencyCode,
+      currencySymbol: currencySymbol,
       clientId: newClientId,
       address: data.object.address,
       roomType: data.object.roomType,
@@ -354,10 +364,19 @@ export default function App() {
   };
 
   const handleSaveMeasurement = (measurement: RoomMeasurement) => {
+    const assignedCurrencyCode = measurement.currencyCode || measurement.priceSnapshot?.currencyCode || selectedCurrencyCode;
+    const assignedCurrencySymbol = measurement.currencySymbol || measurement.priceSnapshot?.currencySymbol || currencySymbol;
+    const snapshot = measurement.priceSnapshot || priceList;
     const measWithDocAndPrice: RoomMeasurement = {
       ...measurement,
       docNumber: measurement.docNumber || generateEstimateDocNumber(new Date(), masterProfile?.masterName, masterProfile?.companyName),
-      priceSnapshot: measurement.priceSnapshot || priceList,
+      currencyCode: assignedCurrencyCode,
+      currencySymbol: assignedCurrencySymbol,
+      priceSnapshot: {
+        ...snapshot,
+        currencyCode: snapshot.currencyCode || assignedCurrencyCode,
+        currencySymbol: snapshot.currencySymbol || assignedCurrencySymbol,
+      },
     };
     AppStorage.saveMeasurement(measWithDocAndPrice);
     handleExitMeasurementEditor();
@@ -371,8 +390,13 @@ export default function App() {
 
   // Price list handlers
   const handleSavePriceList = (newPriceList: MasterPriceList) => {
-    AppStorage.savePriceList(newPriceList);
-    setPriceList(newPriceList);
+    const priceListWithCurrency: MasterPriceList = {
+      ...newPriceList,
+      currencyCode: newPriceList.currencyCode || selectedCurrencyCode,
+      currencySymbol: newPriceList.currencySymbol || currencySymbol,
+    };
+    AppStorage.savePriceList(priceListWithCurrency);
+    setPriceList(priceListWithCurrency);
   };
 
   const handleSaveMasterProfile = (newProfile: MasterProfile) => {
@@ -410,7 +434,13 @@ export default function App() {
     const newMeas: RoomMeasurement = {
       id: `meas-${Date.now()}`,
       docNumber: generateEstimateDocNumber(new Date(), masterProfile?.masterName, masterProfile?.companyName),
-      priceSnapshot: priceList,
+      currencyCode: selectedCurrencyCode,
+      currencySymbol: currencySymbol,
+      priceSnapshot: {
+        ...priceList,
+        currencyCode: selectedCurrencyCode,
+        currencySymbol: currencySymbol,
+      },
       objectId: data.objectId,
       name: data.roomName,
       shape: 'rectangle',

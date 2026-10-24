@@ -111,10 +111,17 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
   const [activePriceList, setActivePriceList] = useState<MasterPriceList>(() => {
     return initialMeasurement?.priceSnapshot || priceList;
   });
+  const [activeCurrencySymbol, setActiveCurrencySymbol] = useState<string>(() => {
+    return initialMeasurement?.priceSnapshot?.currencySymbol || 
+           initialMeasurement?.currencySymbol || 
+           activeObject?.currencySymbol || 
+           currencySymbol;
+  });
   const [isPriceRecalculated, setIsPriceRecalculated] = useState<boolean>(false);
 
   const handleRecalculatePrices = () => {
     setActivePriceList(priceList);
+    setActiveCurrencySymbol(priceList.currencySymbol || currencySymbol);
     setIsPriceRecalculated(true);
   };
 
@@ -330,7 +337,12 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
         masterProfile?.masterName,
         masterProfile?.companyName
       ),
-      priceSnapshot: activePriceList,
+      currencyCode: activePriceList.currencyCode,
+      currencySymbol: activeCurrencySymbol,
+      priceSnapshot: {
+        ...activePriceList,
+        currencySymbol: activeCurrencySymbol,
+      },
       updatedAt: new Date().toISOString(),
     };
 
@@ -1015,7 +1027,7 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
               unit={customOpt.unit || 'шт'}
               min={0}
               steppers={customOpt.unit === 'м' || customOpt.unit === 'м²' || customOpt.unit === 'м.п.' ? [-0.5, 0.5] : [-1, 1]}
-              helperText={`(${customOpt.price} ${currencySymbol}/${customOpt.unit || 'шт'})`}
+              helperText={`(${customOpt.price} ${activeCurrencySymbol}/${customOpt.unit || 'шт'})`}
               numpadTitle={customOpt.name}
             />
           ))}
@@ -1064,26 +1076,26 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
             <span>{t.totalCost}</span>
           </span>
           <span className="text-2xl font-black font-mono text-cyan-700 dark:text-cyan-300">
-            {costDetails.totalCost.toLocaleString('uk-UA')} {currencySymbol}
+            {costDetails.totalCost.toLocaleString('uk-UA')} {activeCurrencySymbol}
           </span>
         </div>
 
         <div className="grid grid-cols-2 gap-2 text-xs text-slate-700 dark:text-slate-300">
           <div className="flex justify-between py-1 border-b border-slate-200 dark:border-slate-800/40">
             <span className="text-slate-500 dark:text-slate-400">{t.canvasCost}:</span>
-            <span className="font-mono font-bold text-slate-900 dark:text-white">{costDetails.canvasCost.toLocaleString('uk-UA')} {currencySymbol}</span>
+            <span className="font-mono font-bold text-slate-900 dark:text-white">{costDetails.canvasCost.toLocaleString('uk-UA')} {activeCurrencySymbol}</span>
           </div>
           <div className="flex justify-between py-1 border-b border-slate-200 dark:border-slate-800/40">
             <span className="text-slate-500 dark:text-slate-400">{t.profileCost}:</span>
-            <span className="font-mono font-bold text-slate-900 dark:text-white">{costDetails.profileCost.toLocaleString('uk-UA')} {currencySymbol}</span>
+            <span className="font-mono font-bold text-slate-900 dark:text-white">{costDetails.profileCost.toLocaleString('uk-UA')} {activeCurrencySymbol}</span>
           </div>
           <div className="flex justify-between py-1 border-b border-slate-200 dark:border-slate-800/40">
             <span className="text-slate-500 dark:text-slate-400">{t.complexityCost}:</span>
-            <span className="font-mono font-bold text-amber-700 dark:text-amber-300">{costDetails.complexityCost.toLocaleString('uk-UA')} {currencySymbol}</span>
+            <span className="font-mono font-bold text-amber-700 dark:text-amber-300">{costDetails.complexityCost.toLocaleString('uk-UA')} {activeCurrencySymbol}</span>
           </div>
           <div className="flex justify-between py-1 border-b border-slate-200 dark:border-slate-800/40">
             <span className="text-slate-500 dark:text-slate-400">{t.optionsCost}:</span>
-            <span className="font-mono font-bold text-cyan-700 dark:text-cyan-300">{costDetails.optionsCost.toLocaleString('uk-UA')} {currencySymbol}</span>
+            <span className="font-mono font-bold text-cyan-700 dark:text-cyan-300">{costDetails.optionsCost.toLocaleString('uk-UA')} {activeCurrencySymbol}</span>
           </div>
         </div>
 
@@ -1094,7 +1106,7 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
               <div key={co.id} className="flex justify-between text-xs text-slate-600 dark:text-slate-300">
                 <span>• {co.name} ({co.quantity} {co.unit}):</span>
                 <span className="font-mono font-bold text-slate-900 dark:text-white">
-                  +{(co.quantity * co.price).toLocaleString('uk-UA')} {currencySymbol}
+                  +{(co.quantity * co.price).toLocaleString('uk-UA')} {activeCurrencySymbol}
                 </span>
               </div>
             ))}
@@ -1195,14 +1207,22 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
             photos,
             costDetails,
             docNumber: initialMeasurement?.docNumber,
-            priceSnapshot: activePriceList,
+            currencyCode: activePriceList.currencyCode,
+            currencySymbol: activeCurrencySymbol,
+            priceSnapshot: {
+              ...activePriceList,
+              currencySymbol: activeCurrencySymbol,
+            },
             updatedAt: new Date().toISOString(),
           }}
           parentObject={activeObject}
           client={activeClient}
           masterProfile={masterProfile}
-          priceList={activePriceList}
-          currencySymbol={currencySymbol}
+          priceList={{
+            ...activePriceList,
+            currencySymbol: activeCurrencySymbol,
+          }}
+          currencySymbol={activeCurrencySymbol}
           t={t}
           locale={locale}
         />

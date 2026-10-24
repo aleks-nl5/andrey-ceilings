@@ -41,6 +41,8 @@ export const DEFAULT_PRICE_LIST: MasterPriceList = {
   curtainNichePerMeter: 450,   // Ніша під карниз (ПК-5 або брус) - 450 ₴/м
   extraCornerCost: 90,         // Додатковий кут понад 4 - 90 ₴
   hardWallPerMeter: 220,       // Свердління керамограніту - 220 ₴/м
+  currencyCode: 'UAH',
+  currencySymbol: '₴',
 };
 
 /**

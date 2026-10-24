@@ -1,3 +1,5 @@
+import { CurrencyCode } from '../utils/regionSettings';
+
 export type OrderStatus = 
   | 'measurement'   // Замір
   | 'calculation'   // Розрахунок / Кошторис
@@ -96,6 +98,8 @@ export interface RoomMeasurement {
   costDetails: CostBreakdown;
   docNumber?: string;             // Постійний номер кошторису (наприклад, "261022-АО-1941")
   priceSnapshot?: MasterPriceList;// Снепшот прайс-листа на момент збереження (для фіксації цін)
+  currencyCode?: CurrencyCode;    // Зафіксована валюта заміру ('UAH' | 'USD' | 'EUR')
+  currencySymbol?: string;        // Символ валюти заміру ('₴', '$', '€')
   updatedAt: string;
 }
 
@@ -122,6 +126,8 @@ export interface ObjectProject {
   prepayment: number;             // Внесенный аванс (руб)
   discountPercent?: number;       // Скидка (%)
   docNumber?: string;             // Постійний номер кошторису для об'єкта
+  currencyCode?: CurrencyCode;    // Зафіксована валюта об'єкта ('UAH' | 'USD' | 'EUR')
+  currencySymbol?: string;        // Символ валюти об'єкта ('₴', '$', '€')
   notes?: string;                 // Примечания к объекту
   createdAt: string;
   updatedAt: string;
@@ -153,6 +159,8 @@ export interface MasterPriceList {
   hardWallPerMeter: number;       // Сверление керамогранита, руб/м
   customItems?: CustomPriceItem[]; // Пользовательские добавленные позиции
   deletedStandardKeys?: string[]; // Ключи удаленных/скрытых стандартных позиций
+  currencyCode?: CurrencyCode;    // Валюта прайсу ('UAH' | 'USD' | 'EUR')
+  currencySymbol?: string;        // Символ валюти ('₴', '$', '€')
 }
 
 export interface CustomPriceItem {

@@ -76,6 +76,23 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
     );
   });
 
+  // Locked document currency:
+  // Strictly preserves currency from saved measurement/priceSnapshot/object,
+  // preventing global Settings changes from modifying historical PDF currency!
+  const docCurrencySymbol = useMemo(() => {
+    if (printScope === 'single') {
+      const single = allRooms.find((r) => r.id === selectedSingleId) || measurement || allRooms[0];
+      if (single?.priceSnapshot?.currencySymbol) return single.priceSnapshot.currencySymbol;
+      if (single?.currencySymbol) return single.currencySymbol;
+    }
+    const roomWithCur = allRooms.find((r) => r.priceSnapshot?.currencySymbol || r.currencySymbol);
+    if (roomWithCur?.priceSnapshot?.currencySymbol) return roomWithCur.priceSnapshot.currencySymbol;
+    if (roomWithCur?.currencySymbol) return roomWithCur.currencySymbol;
+    if (parentObject?.currencySymbol) return parentObject.currencySymbol;
+    if (prices.currencySymbol) return prices.currencySymbol;
+    return currencySymbol || '₴';
+  }, [printScope, selectedSingleId, allRooms, measurement, parentObject, prices.currencySymbol, currencySymbol]);
+
   useEffect(() => {
     if (!isOpen) return;
 
@@ -91,6 +108,10 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
             profile?.companyName
           );
           targetRoom.docNumber = generated;
+          if (!targetRoom.currencySymbol) targetRoom.currencySymbol = docCurrencySymbol;
+          if (targetRoom.priceSnapshot && !targetRoom.priceSnapshot.currencySymbol) {
+            targetRoom.priceSnapshot.currencySymbol = docCurrencySymbol;
+          }
           AppStorage.saveMeasurement(targetRoom);
           setDocumentNumber(generated);
         }
@@ -108,12 +129,13 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
         );
         if (parentObject) {
           parentObject.docNumber = generated;
+          if (!parentObject.currencySymbol) parentObject.currencySymbol = docCurrencySymbol;
           AppStorage.saveObject(parentObject);
         }
         setDocumentNumber(generated);
       }
     }
-  }, [isOpen, printScope, selectedSingleId, profile?.masterName, profile?.companyName]);
+  }, [isOpen, printScope, selectedSingleId, profile?.masterName, profile?.companyName, docCurrencySymbol]);
 
   if (!isOpen) return null;
 
@@ -455,6 +477,7 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
                   totalCost: 0,
                 };
                 const roomPrices = room.priceSnapshot || prices;
+                const roomCurrency = roomPrices.currencySymbol || room.currencySymbol || docCurrencySymbol;
 
                 const customCanvasItem = (roomPrices.customItems || []).find((i) => i.id === room.materialType);
                 const canvasRate = customCanvasItem 
@@ -538,8 +561,8 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
                             <th className="py-1.5 px-2 font-bold">Найменування робіт та матеріалів</th>
                             <th className="py-1.5 px-2 font-bold text-center w-16">Кількість</th>
                             <th className="py-1.5 px-2 font-bold text-center w-14">Од. вим.</th>
-                            <th className="py-1.5 px-2 font-bold text-right w-20">Ціна, {currencySymbol}</th>
-                            <th className="py-1.5 px-2 font-bold text-right w-24">Сума, {currencySymbol}</th>
+                            <th className="py-1.5 px-2 font-bold text-right w-20">Ціна, {roomCurrency}</th>
+                            <th className="py-1.5 px-2 font-bold text-right w-24">Сума, {roomCurrency}</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200 text-black">
@@ -669,7 +692,7 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
                               Разом по приміщенню «{room.name || 'Приміщення'}»:
                             </td>
                             <td className="py-2 px-2 text-right font-mono text-sm text-black">
-                              {cost.totalCost || 0} {currencySymbol}
+                              {cost.totalCost || 0} {roomCurrency}
                             </td>
                           </tr>
                         </tbody>
@@ -692,32 +715,32 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
               <div className="space-y-1.5 text-xs text-black">
                 <div className="flex justify-between py-1 border-b border-gray-200">
                   <span className="text-gray-700">Сума за матеріали та монтажні роботи:</span>
-                  <span className="font-mono font-bold text-black">{totalBaseCost} {currencySymbol}</span>
+                  <span className="font-mono font-bold text-black">{totalBaseCost} {docCurrencySymbol}</span>
                 </div>
 
                 {discountPercent > 0 && (
                   <div className="flex justify-between py-1 border-b border-gray-200 text-black">
                     <span>Знижка ({discountPercent}%):</span>
-                    <span className="font-mono font-bold">- {discountAmount} {currencySymbol}</span>
+                    <span className="font-mono font-bold">- {discountAmount} {docCurrencySymbol}</span>
                   </div>
                 )}
 
                 <div className="flex justify-between py-1 border-b border-gray-200">
                   <span className="text-gray-700">Загальна вартість договору:</span>
-                  <span className="font-mono font-bold text-black">{finalTotal} {currencySymbol}</span>
+                  <span className="font-mono font-bold text-black">{finalTotal} {docCurrencySymbol}</span>
                 </div>
 
                 {prepayment > 0 && (
                   <div className="flex justify-between py-1 border-b border-gray-200 text-black">
                     <span>Внесена попередня оплата (аванс):</span>
-                    <span className="font-mono font-bold">{prepayment} {currencySymbol}</span>
+                    <span className="font-mono font-bold">{prepayment} {docCurrencySymbol}</span>
                   </div>
                 )}
 
                 <div className="flex justify-between items-center pt-2 text-sm font-extrabold text-black">
                   <span className="uppercase tracking-wide">До сплати після встановлення:</span>
                   <span className="font-mono text-base font-extrabold text-black underline underline-offset-4">
-                    {balanceDue} {currencySymbol}
+                    {balanceDue} {docCurrencySymbol}
                   </span>
                 </div>
               </div>

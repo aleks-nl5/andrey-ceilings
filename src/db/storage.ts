@@ -7,7 +7,7 @@ import {
 } from '../types/database';
 import { DEFAULT_PRICE_LIST } from '../utils/calculator';
 
-import { CurrencyCode } from '../utils/regionSettings';
+import { CurrencyCode, getCurrencySymbol } from '../utils/regionSettings';
 
 const STORAGE_KEYS = {
   CLIENTS: 'potolok_pro_clients_v2_ua',
@@ -281,11 +281,24 @@ export class AppStorage {
   static getPriceList(): MasterPriceList {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.PRICE_LIST);
+      const currCode = this.getCurrencyCode();
+      const currSym = getCurrencySymbol(currCode);
       if (!data) {
-        localStorage.setItem(STORAGE_KEYS.PRICE_LIST, JSON.stringify(DEFAULT_PRICE_LIST));
-        return DEFAULT_PRICE_LIST;
+        const defaultWithCurr: MasterPriceList = {
+          ...DEFAULT_PRICE_LIST,
+          currencyCode: currCode,
+          currencySymbol: currSym,
+        };
+        localStorage.setItem(STORAGE_KEYS.PRICE_LIST, JSON.stringify(defaultWithCurr));
+        return defaultWithCurr;
       }
-      return { ...DEFAULT_PRICE_LIST, ...JSON.parse(data) };
+      const parsed = JSON.parse(data);
+      return {
+        ...DEFAULT_PRICE_LIST,
+        currencyCode: parsed.currencyCode || currCode,
+        currencySymbol: parsed.currencySymbol || (parsed.currencyCode ? getCurrencySymbol(parsed.currencyCode) : currSym),
+        ...parsed,
+      };
     } catch {
       return DEFAULT_PRICE_LIST;
     }
