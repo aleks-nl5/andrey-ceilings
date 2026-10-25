@@ -31,7 +31,7 @@ interface CurrencyCache {
   eurUsd: CurrencyRateDetail | null;
 }
 
-const CACHE_KEY = 'ceilingpro_monobank_rates_v3';
+const CACHE_KEY = 'ceilingpro_monobank_rates_v4';
 const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes strict cache interval
 const MONOBANK_DIRECT_URL = 'https://api.monobank.ua/bank/currency';
 const MONOBANK_PROXY_URL = '/api/monobank';
@@ -39,7 +39,7 @@ const MONOBANK_PROXY_URL = '/api/monobank';
 // Default fallback based on real Monobank rates
 const DEFAULT_FALLBACK: CurrencyCache = {
   timestamp: 0,
-  fetchDateFormatted: 'Кеш очікує оновлення',
+  fetchDateFormatted: '',
   usdUah: { buy: 45.16, sell: 45.65, date: 1792875673 },
   eurUah: { buy: 50.57, sell: 51.27, date: 1792875673 },
   eurUsd: { buy: 1.116, sell: 1.126, date: 1792875673 },
@@ -403,12 +403,12 @@ export const CurrencyRatesWidget: React.FC = () => {
       <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
         <div className="flex items-center gap-1.5" title="Час встановлення курсу Monobank">
           <CalendarCheck className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400 shrink-0" />
-          <span>Встановлено банком: {formatBankDate(latestBankDate)}</span>
+          <span>Встановлено: {formatBankDate(latestBankDate)}</span>
         </div>
 
-        <div className="flex items-center gap-1.5" title="Час останньої перевірки додатком">
+        <div className="flex items-center gap-1.5" title="Час оновлення даних">
           <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-          <span>Перевірено: {cache.fetchDateFormatted}</span>
+          <span>Оновлено: {formatTimestamp(cache.timestamp)}</span>
         </div>
       </div>
     </div>
