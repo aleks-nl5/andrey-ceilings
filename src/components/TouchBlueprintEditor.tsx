@@ -13,6 +13,7 @@ import {
   ZoomOut
 } from 'lucide-react';
 import { RoomShape, RoomOptions } from '../types/database';
+import { Point2D, createDefaultCustomPoints } from '../utils/calculator';
 
 export interface TouchPoint {
   id: string;
@@ -41,6 +42,7 @@ interface TouchBlueprintEditorProps {
   sideE?: number;
   sideF?: number;
   customSides?: number[];
+  customPoints?: Point2D[];
   diagonal1?: number;
   diagonal2?: number;
   options: Partial<RoomOptions>;
@@ -54,6 +56,7 @@ interface TouchBlueprintEditorProps {
     sideE?: number;
     sideF?: number;
     customSides?: number[];
+    customPoints?: Point2D[];
     diagonal1?: number;
     diagonal2?: number;
     area: number;
@@ -75,6 +78,7 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
   sideE,
   sideF,
   customSides,
+  customPoints,
   diagonal1,
   diagonal2,
   options,
@@ -158,21 +162,35 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
         { id: 'v-4', label: 'E', x: startX + (a - e) * ppmL, y: startY + b * ppmL },
         { id: 'v-5', label: 'F', x: startX, y: startY + b * ppmL },
       ]);
-    } else if (customSides && customSides.length >= 3) {
-      const n = customSides.length;
-      const totalP = customSides.reduce((sum, s) => sum + s, 0) || 1;
-      let currAngle = -Math.PI / 2;
-      const angles: number[] = [];
-      for (let i = 0; i < n; i++) {
-        angles.push(currAngle);
-        currAngle += (customSides[i] / totalP) * Math.PI * 2;
+    } else if (shape === 'custom') {
+      let ptsToUse: Point2D[] = [];
+      if (customPoints && customPoints.length >= 3) {
+        ptsToUse = customPoints;
+      } else if (customSides && customSides.length >= 3) {
+        ptsToUse = createDefaultCustomPoints(l, w, customSides.length);
+      } else {
+        ptsToUse = createDefaultCustomPoints(l, w, 4);
       }
-      const maxR = Math.min(availW / 2, availH / 2) * 0.85;
-      const customVerts: TouchPoint[] = angles.map((ang, i) => ({
+
+      const xs = ptsToUse.map((p) => p.x);
+      const ys = ptsToUse.map((p) => p.y);
+      const minX = Math.min(...xs);
+      const maxX = Math.max(...xs);
+      const minY = Math.min(...ys);
+      const maxY = Math.max(...ys);
+      const wM = Math.max(0.2, maxX - minX);
+      const hM = Math.max(0.2, maxY - minY);
+      const midXM = (minX + maxX) / 2;
+      const midYM = (minY + maxY) / 2;
+
+      const ppmCustom = Math.min(availW / wM, availH / hM) * 0.82;
+      setPixelsPerMeter(ppmCustom);
+
+      const customVerts: TouchPoint[] = ptsToUse.map((p, i) => ({
         id: `v-${i}`,
         label: String.fromCharCode(65 + i),
-        x: Math.round((centerX + maxR * Math.cos(ang)) * 10) / 10,
-        y: Math.round((centerY + maxR * Math.sin(ang)) * 10) / 10,
+        x: Math.round((centerX + (p.x - midXM) * ppmCustom) * 10) / 10,
+        y: Math.round((centerY + (p.y - midYM) * ppmCustom) * 10) / 10,
       }));
       setVertices(customVerts);
     } else {
@@ -226,7 +244,7 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
 
     setFixtures(newFixtures);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shape, customSides]);
+  }, [shape, customSides, customPoints]);
 
   // Only re-initialize when shape changes or initial mount, NOT on every dragged dimension change!
   useEffect(() => {
@@ -236,14 +254,41 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
     }
   }, [shape, initVertices]);
 
-  // Synchronize when customSides count changes from parent (adding or removing sides)
+  // Synchronize when customPoints changes from parent (e.g. manual side length input) or side count changes
   useEffect(() => {
-    if (shape === 'custom' && customSides && customSides.length >= 3) {
-      if (customSides.length !== vertices.length && !activeDragId) {
+    if (shape === 'custom' && !activeDragId) {
+      if (customPoints && customPoints.length >= 3) {
+        const xs = customPoints.map((p) => p.x);
+        const ys = customPoints.map((p) => p.y);
+        const minX = Math.min(...xs);
+        const maxX = Math.max(...xs);
+        const minY = Math.min(...ys);
+        const maxY = Math.max(...ys);
+        const wM = Math.max(0.2, maxX - minX);
+        const hM = Math.max(0.2, maxY - minY);
+        const midXM = (minX + maxX) / 2;
+        const midYM = (minY + maxY) / 2;
+
+        const availW = canvasWidth - padding * 2;
+        const availH = canvasHeight - padding * 2;
+        const ppmCustom = Math.min(availW / wM, availH / hM) * 0.82;
+        setPixelsPerMeter(ppmCustom);
+
+        const cX = canvasWidth / 2;
+        const cY = canvasHeight / 2;
+
+        const newVerts: TouchPoint[] = customPoints.map((p, i) => ({
+          id: `v-${i}`,
+          label: String.fromCharCode(65 + i),
+          x: Math.round((cX + (p.x - midXM) * ppmCustom) * 10) / 10,
+          y: Math.round((cY + (p.y - midYM) * ppmCustom) * 10) / 10,
+        }));
+        setVertices(newVerts);
+      } else if (customSides && customSides.length >= 3 && customSides.length !== vertices.length) {
         initVertices();
       }
     }
-  }, [shape, customSides, vertices.length, activeDragId, initVertices]);
+  }, [shape, customPoints, customSides, activeDragId, initVertices, vertices.length]);
 
   // Zoom handlers
   const handleZoomIn = () => setZoomLevel((prev) => Math.min(2.5, Math.round((prev + 0.15) * 100) / 100));
@@ -336,6 +381,13 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
       const l = metrics.sides[0] || initialLength;
       const w = metrics.sides[1] || initialWidth;
 
+      const cX = canvasWidth / 2;
+      const cY = canvasHeight / 2;
+      const meterPoints: Point2D[] = updatedVertices.map((v) => ({
+        x: Math.round(((v.x - cX) / pixelsPerMeter) * 100) / 100,
+        y: Math.round(((v.y - cY) / pixelsPerMeter) * 100) / 100,
+      }));
+
       // Diagonals if 4 corners
       let d1 = diagonal1;
       let d2 = diagonal2;
@@ -356,6 +408,7 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
         sideE: metrics.sides[4],
         sideF: metrics.sides[5],
         customSides: metrics.sides,
+        customPoints: meterPoints,
         diagonal1: d1,
         diagonal2: d2,
         area: metrics.area,
@@ -401,11 +454,19 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
     const nextList = [...vertices, newVertex];
     setVertices(nextList);
 
+    const cX = canvasWidth / 2;
+    const cY = canvasHeight / 2;
+    const meterPoints: Point2D[] = nextList.map((v) => ({
+      x: Math.round(((v.x - cX) / pixelsPerMeter) * 100) / 100,
+      y: Math.round(((v.y - cY) / pixelsPerMeter) * 100) / 100,
+    }));
+
     const metrics = calculatePolygonMetrics(nextList, pixelsPerMeter);
     onDimensionsChange({
       length: metrics.sides[0] || initialLength,
       width: metrics.sides[1] || initialWidth,
       customSides: metrics.sides,
+      customPoints: meterPoints,
       area: metrics.area,
       perimeter: metrics.perimeter,
       cornersCount: nextList.length,
@@ -424,11 +485,19 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
     setVertices(relabeled);
     setSelectedVertexId(null);
 
+    const cX = canvasWidth / 2;
+    const cY = canvasHeight / 2;
+    const meterPoints: Point2D[] = relabeled.map((v) => ({
+      x: Math.round(((v.x - cX) / pixelsPerMeter) * 100) / 100,
+      y: Math.round(((v.y - cY) / pixelsPerMeter) * 100) / 100,
+    }));
+
     const metrics = calculatePolygonMetrics(relabeled, pixelsPerMeter);
     onDimensionsChange({
       length: metrics.sides[0] || initialLength,
       width: metrics.sides[1] || initialWidth,
       customSides: metrics.sides,
+      customPoints: meterPoints,
       area: metrics.area,
       perimeter: metrics.perimeter,
       cornersCount: relabeled.length,

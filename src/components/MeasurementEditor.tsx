@@ -44,7 +44,12 @@ import {
   calculateCeilingCost, 
   getMaterialLabel, 
   getComplexityLabel, 
-  getProfileLabel 
+  getProfileLabel,
+  Point2D,
+  createDefaultCustomPoints,
+  adjustPolygonSide,
+  addPolygonVertex,
+  removePolygonVertex
 } from '../utils/calculator';
 import { generateEstimateDocNumber } from '../utils/documentNumber';
 import { TouchBlueprintEditor } from './TouchBlueprintEditor';
@@ -168,6 +173,18 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
   const [diagonal2, setDiagonal2] = useState<number>(initialMeasurement?.diagonal2 || 0);
 
   // Custom multi-side shape (Складна форма)
+  const [customPoints, setCustomPoints] = useState<Point2D[]>(() => {
+    if (initialMeasurement?.customPoints && initialMeasurement.customPoints.length >= 3) {
+      return initialMeasurement.customPoints;
+    }
+    const sidesCount = initialMeasurement?.customSides?.length || 4;
+    return createDefaultCustomPoints(
+      initialMeasurement?.length || 4.2,
+      initialMeasurement?.width || 3.5,
+      sidesCount
+    );
+  });
+
   const [customSides, setCustomSides] = useState<number[]>(() => {
     if (initialMeasurement?.customSides && initialMeasurement.customSides.length >= 3) {
       return initialMeasurement.customSides;
@@ -182,21 +199,24 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
 
   const handleAddCustomSide = () => {
     if (customSides.length >= 12) return;
-    const avg = Math.round((customSides.reduce((a, b) => a + b, 0) / customSides.length) * 10) / 10 || 2.5;
-    setCustomSides((prev) => [...prev, avg]);
+    const res = addPolygonVertex(customPoints);
+    setCustomPoints(res.points);
+    setCustomSides(res.sides);
   };
 
   const handleRemoveCustomSide = (indexToRemove: number) => {
     if (customSides.length <= 3) return;
-    setCustomSides((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+    const res = removePolygonVertex(customPoints, indexToRemove);
+    setCustomPoints(res.points);
+    setCustomSides(res.sides);
   };
 
   const handleCustomSideChange = (index: number, newLength: number) => {
-    setCustomSides((prev) => {
-      const next = [...prev];
-      next[index] = Math.max(0.1, newLength);
-      return next;
-    });
+    const res = adjustPolygonSide(customPoints, index, newLength);
+    setCustomPoints(res.points);
+    setCustomSides(res.sides);
+    if (res.sides[0]) setLength(res.sides[0]);
+    if (res.sides[1]) setWidth(res.sides[1]);
   };
 
   // Manual direct override for Area and Perimeter
@@ -298,6 +318,7 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
     sideE,
     sideF,
     customSides: shape === 'custom' ? customSides : undefined,
+    customPoints: shape === 'custom' ? customPoints : undefined,
     diagonal1: diagonal1 > 0 ? diagonal1 : undefined,
     diagonal2: diagonal2 > 0 ? diagonal2 : undefined,
   });
@@ -338,6 +359,7 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
     sideE?: number;
     sideF?: number;
     customSides?: number[];
+    customPoints?: Point2D[];
     diagonal1?: number;
     diagonal2?: number;
     area: number;
@@ -352,6 +374,9 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
     if (params.sideD !== undefined) setSideD(params.sideD);
     if (params.sideE !== undefined) setSideE(params.sideE);
     if (params.sideF !== undefined) setSideF(params.sideF);
+    if (params.customPoints && params.customPoints.length >= 3 && shape === 'custom') {
+      setCustomPoints(params.customPoints);
+    }
     if (params.customSides && params.customSides.length >= 3 && shape === 'custom') {
       setCustomSides(params.customSides);
     }
@@ -380,6 +405,7 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
       sideE: shape === 'l_shaped' ? sideE : undefined,
       sideF: shape === 'l_shaped' ? sideF : undefined,
       customSides: shape === 'custom' ? customSides : undefined,
+      customPoints: shape === 'custom' ? customPoints : undefined,
       diagonal1: diagonal1 > 0 ? diagonal1 : undefined,
       diagonal2: diagonal2 > 0 ? diagonal2 : undefined,
       area: effectiveArea,
@@ -602,6 +628,7 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
             sideE={sideE}
             sideF={sideF}
             customSides={shape === 'custom' ? customSides : undefined}
+            customPoints={shape === 'custom' ? customPoints : undefined}
             diagonal1={diagonal1}
             diagonal2={diagonal2}
             options={options}
@@ -620,6 +647,7 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
             sideE={sideE}
             sideF={sideF}
             customSides={shape === 'custom' ? customSides : undefined}
+            customPoints={shape === 'custom' ? customPoints : undefined}
             diagonal1={diagonal1}
             diagonal2={diagonal2}
             area={effectiveArea}

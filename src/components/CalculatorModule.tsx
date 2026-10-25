@@ -34,7 +34,12 @@ import {
   getMaterialLabel, 
   getComplexityLabel, 
   getProfileLabel,
-  generateClientOfferText 
+  generateClientOfferText,
+  Point2D,
+  createDefaultCustomPoints,
+  adjustPolygonSide,
+  addPolygonVertex,
+  removePolygonVertex
 } from '../utils/calculator';
 import { NumericInput } from './NumericInput';
 import { TouchBlueprintEditor } from './TouchBlueprintEditor';
@@ -91,25 +96,31 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({
   const [sideF, setSideF] = useState<number>(2.0);
 
   // Custom shape sides (Складна форма)
+  const [customPoints, setCustomPoints] = useState<Point2D[]>(() => {
+    return createDefaultCustomPoints(4.8, 3.5, 4);
+  });
   const [customSides, setCustomSides] = useState<number[]>([4.8, 3.5, 4.0, 3.2]);
 
   const handleAddCustomSide = () => {
     if (customSides.length >= 12) return;
-    const avg = Math.round((customSides.reduce((a, b) => a + b, 0) / customSides.length) * 10) / 10 || 2.5;
-    setCustomSides((prev) => [...prev, avg]);
+    const res = addPolygonVertex(customPoints);
+    setCustomPoints(res.points);
+    setCustomSides(res.sides);
   };
 
   const handleRemoveCustomSide = (indexToRemove: number) => {
     if (customSides.length <= 3) return;
-    setCustomSides((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+    const res = removePolygonVertex(customPoints, indexToRemove);
+    setCustomPoints(res.points);
+    setCustomSides(res.sides);
   };
 
   const handleCustomSideChange = (index: number, newLength: number) => {
-    setCustomSides((prev) => {
-      const next = [...prev];
-      next[index] = Math.max(0.1, newLength);
-      return next;
-    });
+    const res = adjustPolygonSide(customPoints, index, newLength);
+    setCustomPoints(res.points);
+    setCustomSides(res.sides);
+    if (res.sides[0]) setLength(res.sides[0]);
+    if (res.sides[1]) setWidth(res.sides[1]);
   };
 
   // Direct area input
@@ -130,6 +141,7 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({
     sideE,
     sideF,
     customSides: shape === 'custom' ? customSides : undefined,
+    customPoints: shape === 'custom' ? customPoints : undefined,
   });
 
   const handleTouchDimensionsChange = (params: {
@@ -142,6 +154,7 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({
     sideE?: number;
     sideF?: number;
     customSides?: number[];
+    customPoints?: Point2D[];
     area: number;
     perimeter: number;
     cornersCount?: number;
@@ -154,6 +167,9 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({
     if (params.sideD !== undefined) setSideD(params.sideD);
     if (params.sideE !== undefined) setSideE(params.sideE);
     if (params.sideF !== undefined) setSideF(params.sideF);
+    if (params.customPoints && params.customPoints.length >= 3 && shape === 'custom') {
+      setCustomPoints(params.customPoints);
+    }
     if (params.customSides && params.customSides.length >= 3 && shape === 'custom') {
       setCustomSides(params.customSides);
     }
@@ -437,6 +453,7 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({
                       sideE={sideE}
                       sideF={sideF}
                       customSides={shape === 'custom' ? customSides : undefined}
+                      customPoints={shape === 'custom' ? customPoints : undefined}
                       options={currentOptions}
                       onDimensionsChange={handleTouchDimensionsChange}
                     />
@@ -453,6 +470,7 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({
                       sideE={sideE}
                       sideF={sideF}
                       customSides={shape === 'custom' ? customSides : undefined}
+                      customPoints={shape === 'custom' ? customPoints : undefined}
                       area={effectiveArea}
                       perimeter={effectivePerimeter}
                       options={currentOptions}

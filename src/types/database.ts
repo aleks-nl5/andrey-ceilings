@@ -77,6 +77,7 @@ export interface RoomMeasurement {
   sideE?: number;
   sideF?: number;
   customSides?: number[];         // Довжини сторін для складної форми [A-B, B-C, C-D...]
+  customPoints?: { x: number; y: number }[]; // Точні координати вершин багатокутника в метрах (для збереження форми)
   diagonal1?: number;             // Диагональ 1, м
   diagonal2?: number;             // Диагональ 2, м
   

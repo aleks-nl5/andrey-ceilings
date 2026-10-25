@@ -1,5 +1,6 @@
 import React from 'react';
 import { RoomShape, RoomOptions } from '../types/database';
+import { Point2D } from '../utils/calculator';
 
 interface RoomBlueprintProps {
   shape: RoomShape;
@@ -13,6 +14,7 @@ interface RoomBlueprintProps {
   sideE?: number;
   sideF?: number;
   customSides?: number[];
+  customPoints?: Point2D[];
   diagonal1?: number;
   diagonal2?: number;
   area: number;
@@ -35,6 +37,7 @@ export const RoomBlueprint: React.FC<RoomBlueprintProps> = ({
   sideE,
   sideF,
   customSides,
+  customPoints,
   diagonal1,
   diagonal2,
   area,
@@ -136,8 +139,56 @@ export const RoomBlueprint: React.FC<RoomBlueprintProps> = ({
       { x: (p5[0] + p6[0]) / 2, y: p5[1] + 18, text: `E: ${c}м` },
       { x: p6[0] - 12, y: (p6[1] + p1[1]) / 2 + 4, text: `F: ${b}м`, align: 'right' },
     ];
+  } else if (customPoints && customPoints.length >= 3) {
+    // Exact polygon from saved meter coordinates (preserves exact shape and side lengths)
+    const n = customPoints.length;
+    const minX = Math.min(...customPoints.map((p) => p.x));
+    const maxX = Math.max(...customPoints.map((p) => p.x));
+    const minY = Math.min(...customPoints.map((p) => p.y));
+    const maxY = Math.max(...customPoints.map((p) => p.y));
+    const spanW = Math.max(0.5, maxX - minX);
+    const spanH = Math.max(0.5, maxY - minY);
+    const midX = (minX + maxX) / 2;
+    const midY = (minY + maxY) / 2;
+    const scale = Math.min(innerW / spanW, innerH / spanH) * 0.85;
+    const cX = svgWidth / 2;
+    const cY = svgHeight / 2;
+
+    polygonPoints = customPoints.map((pt) => [
+      Math.round((cX + (pt.x - midX) * scale) * 10) / 10,
+      Math.round((cY + (pt.y - midY) * scale) * 10) / 10,
+    ]);
+    pointsStr = polygonPoints.map((p) => p.join(',')).join(' ');
+
+    if (n === 4) {
+      diagonalsToDraw = [
+        { x1: polygonPoints[0][0], y1: polygonPoints[0][1], x2: polygonPoints[2][0], y2: polygonPoints[2][1], label: diagonal1 ? `d1=${diagonal1}м` : undefined },
+        { x1: polygonPoints[1][0], y1: polygonPoints[1][1], x2: polygonPoints[3][0], y2: polygonPoints[3][1], label: diagonal2 ? `d2=${diagonal2}м` : undefined },
+      ];
+    }
+
+    sideLabels = polygonPoints.map((p, idx) => {
+      const next = polygonPoints[(idx + 1) % n];
+      const midPx = (p[0] + next[0]) / 2;
+      const midPy = (p[1] + next[1]) / 2;
+      const startLetter = String.fromCharCode(65 + idx);
+      const endLetter = String.fromCharCode(65 + ((idx + 1) % n));
+      const curPt = customPoints[idx];
+      const nextPt = customPoints[(idx + 1) % n];
+      const distM = Math.round(Math.hypot(nextPt.x - curPt.x, nextPt.y - curPt.y) * 100) / 100;
+      const angle = Math.atan2(next[1] - p[1], next[0] - p[0]);
+      const normalX = -Math.sin(angle) * 16;
+      const normalY = Math.cos(angle) * 16;
+
+      return {
+        x: midPx + normalX,
+        y: midPy + normalY + 4,
+        text: `${startLetter}-${endLetter}: ${distM}м`,
+        align: 'center' as const,
+      };
+    });
   } else if (customSides && customSides.length >= 3) {
-    // Dynamic multi-sided custom polygon
+    // Dynamic multi-sided custom polygon from sides
     const n = customSides.length;
     const totalP = customSides.reduce((sum, s) => sum + s, 0) || 1;
     let currAngle = -Math.PI / 2;

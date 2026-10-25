@@ -45,6 +45,174 @@ export const DEFAULT_PRICE_LIST: MasterPriceList = {
   currencySymbol: '₴',
 };
 
+export interface Point2D {
+  x: number;
+  y: number;
+}
+
+export function createDefaultCustomPoints(length: number, width: number, sidesCount: number = 4): Point2D[] {
+  const l = Math.max(1, length || 4.2);
+  const w = Math.max(1, width || 3.5);
+  if (sidesCount === 4) {
+    return [
+      { x: Math.round((-l / 2) * 100) / 100, y: Math.round((-w / 2) * 100) / 100 },
+      { x: Math.round((l / 2) * 100) / 100, y: Math.round((-w / 2) * 100) / 100 },
+      { x: Math.round((l / 2 - 0.2) * 100) / 100, y: Math.round((w / 2) * 100) / 100 },
+      { x: Math.round((-l / 2) * 100) / 100, y: Math.round((w / 2 - 0.1) * 100) / 100 },
+    ];
+  }
+  const totalP = (l + w) * 2;
+  const avgR = totalP / (2 * Math.PI);
+  let currAngle = -Math.PI / 2;
+  const pts: Point2D[] = [];
+  for (let i = 0; i < sidesCount; i++) {
+    pts.push({
+      x: Math.round(avgR * Math.cos(currAngle) * 100) / 100,
+      y: Math.round(avgR * Math.sin(currAngle) * 100) / 100,
+    });
+    currAngle += (Math.PI * 2) / sidesCount;
+  }
+  return pts;
+}
+
+export function calculateSidesFromPoints(points: Point2D[]): number[] {
+  if (!points || points.length < 2) return [];
+  const n = points.length;
+  return points.map((p, idx) => {
+    const next = points[(idx + 1) % n];
+    return Math.round(Math.hypot(next.x - p.x, next.y - p.y) * 100) / 100;
+  });
+}
+
+export function calculateMetricsFromPoints(points: Point2D[]): {
+  area: number;
+  perimeter: number;
+  sides: number[];
+  cornersCount: number;
+} {
+  if (!points || points.length < 3) {
+    return { area: 0, perimeter: 0, sides: [], cornersCount: 0 };
+  }
+  const n = points.length;
+  const sides = calculateSidesFromPoints(points);
+  const perimeter = Math.round(sides.reduce((acc, s) => acc + s, 0) * 100) / 100;
+
+  // Shoelace formula in meters
+  let areaSum = 0;
+  for (let i = 0; i < n; i++) {
+    const cur = points[i];
+    const next = points[(i + 1) % n];
+    areaSum += cur.x * next.y - next.x * cur.y;
+  }
+  const area = Math.round((Math.abs(areaSum) / 2) * 100) / 100;
+
+  return {
+    area: Math.max(0.1, area),
+    perimeter,
+    sides,
+    cornersCount: n,
+  };
+}
+
+export function adjustPolygonSide(
+  points: Point2D[],
+  sideIndex: number,
+  newLength: number
+): { points: Point2D[]; sides: number[]; area: number; perimeter: number } {
+  if (!points || points.length < 3) {
+    return { points, sides: [], area: 0, perimeter: 0 };
+  }
+  const n = points.length;
+  const safeIdx = ((sideIndex % n) + n) % n;
+  const targetLen = Math.max(0.1, newLength);
+
+  const newPoints = points.map((p) => ({ ...p }));
+  const pFrom = newPoints[safeIdx];
+  const nextIdx = (safeIdx + 1) % n;
+  const pTo = newPoints[nextIdx];
+
+  const dx = pTo.x - pFrom.x;
+  const dy = pTo.y - pFrom.y;
+  const currentDist = Math.hypot(dx, dy);
+
+  let ux = 1;
+  let uy = 0;
+  if (currentDist > 0.001) {
+    ux = dx / currentDist;
+    uy = dy / currentDist;
+  }
+
+  // Move vertex nextIdx along the ray from pFrom so its distance becomes targetLen
+  newPoints[nextIdx] = {
+    x: Math.round((pFrom.x + ux * targetLen) * 100) / 100,
+    y: Math.round((pFrom.y + uy * targetLen) * 100) / 100,
+  };
+
+  const metrics = calculateMetricsFromPoints(newPoints);
+  return {
+    points: newPoints,
+    sides: metrics.sides,
+    area: metrics.area,
+    perimeter: metrics.perimeter,
+  };
+}
+
+export function addPolygonVertex(points: Point2D[]): {
+  points: Point2D[];
+  sides: number[];
+  area: number;
+  perimeter: number;
+} {
+  if (!points || points.length < 3) {
+    return { points, sides: [], area: 0, perimeter: 0 };
+  }
+  const n = points.length;
+  const last = points[n - 1];
+  const first = points[0];
+
+  const midX = (last.x + first.x) / 2;
+  const midY = (last.y + first.y) / 2;
+  const dx = first.x - last.x;
+  const dy = first.y - last.y;
+  const dist = Math.hypot(dx, dy) || 1;
+
+  // Normal vector outward
+  const normalX = (-dy / dist) * 0.6;
+  const normalY = (dx / dist) * 0.6;
+
+  const newPt: Point2D = {
+    x: Math.round((midX + normalX) * 100) / 100,
+    y: Math.round((midY + normalY) * 100) / 100,
+  };
+
+  const newPoints = [...points, newPt];
+  const metrics = calculateMetricsFromPoints(newPoints);
+  return {
+    points: newPoints,
+    sides: metrics.sides,
+    area: metrics.area,
+    perimeter: metrics.perimeter,
+  };
+}
+
+export function removePolygonVertex(
+  points: Point2D[],
+  indexToRemove: number
+): { points: Point2D[]; sides: number[]; area: number; perimeter: number } {
+  if (!points || points.length <= 3) {
+    const metrics = calculateMetricsFromPoints(points);
+    return { points, sides: metrics.sides, area: metrics.area, perimeter: metrics.perimeter };
+  }
+  const newPoints = points.filter((_, idx) => idx !== indexToRemove);
+  const metrics = calculateMetricsFromPoints(newPoints);
+  return {
+    points: newPoints,
+    sides: metrics.sides,
+    area: metrics.area,
+    perimeter: metrics.perimeter,
+  };
+}
+
 /**
  * Расчет геометрии помещения (Площадь, Периметр, Количество углов)
  */
@@ -62,6 +230,7 @@ export function calculateRoomGeometry(params: {
   diagonal1?: number;
   diagonal2?: number;
   customSides?: number[];
+  customPoints?: Point2D[];
   customDiagonals?: number[];
 }): { area: number; perimeter: number; cornersCount: number } {
   const { shape, length, width, sideA, sideB, sideC, sideD, sideE, sideF } = params;
@@ -96,6 +265,16 @@ export function calculateRoomGeometry(params: {
     const perimeter = Math.round((a + b + c + d + e + f) * 100) / 100;
 
     return { area, perimeter, cornersCount: 6 };
+  }
+
+  // Custom / irregular room with explicit points in meters
+  if (params.customPoints && params.customPoints.length >= 3) {
+    const metrics = calculateMetricsFromPoints(params.customPoints);
+    return {
+      area: metrics.area,
+      perimeter: metrics.perimeter,
+      cornersCount: metrics.cornersCount,
+    };
   }
 
   // Custom / irregular room
