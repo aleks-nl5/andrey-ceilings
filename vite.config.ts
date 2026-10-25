@@ -60,6 +60,15 @@ export default defineConfig(() => {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       hmr: process.env.DISABLE_HMR !== 'true',
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
+      proxy: {
+        '/api/monobank': {
+          target: 'https://api.monobank.ua',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api\/monobank/, '/bank/currency'),
+          secure: false,
+        },
+      },
     },
   };
 });
+

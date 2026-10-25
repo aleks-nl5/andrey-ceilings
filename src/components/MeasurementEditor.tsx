@@ -20,8 +20,14 @@ import {
   Hash,
   Printer,
   RotateCw,
-  Lock
+  Lock,
+  Edit3,
+  Trash2,
+  Plus,
+  X,
+  RotateCcw
 } from 'lucide-react';
+import { AppStorage } from '../db/storage';
 import { 
   RoomMeasurement, 
   RoomShape, 
@@ -77,17 +83,6 @@ const ROOM_NAME_PRESETS_UK = [
   'Балкон'
 ];
 
-const QUICK_COMMENT_TAGS_UK = [
-  'Керамограніт на стінах (алмазне свердління)',
-  'Прихована проводка під стелею',
-  'Перепад плит перекриття',
-  'Стояк опалення впритул до стіни',
-  'Слабка штукатурка (потрібен брус)',
-  'Висока стеля >3.0м',
-  'Вентканал / витяжка у стелі',
-  'Прихована ніша під штори (ПК-5)',
-];
-
 export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
   initialMeasurement,
   objectId,
@@ -106,6 +101,31 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
   const [isPrintModalOpen, setIsPrintModalOpen] = useState<boolean>(false);
   const activeObject = allObjects.find((o) => o.id === currentObjectId) || parentObject;
   const activeClient = allClients.find((c) => c.id === activeObject?.clientId);
+
+  // Quick comment tags (customizable, saved to AppStorage)
+  const [quickTags, setQuickTags] = useState<string[]>(() => AppStorage.getQuickCommentTags());
+  const [isManagingTags, setIsManagingTags] = useState<boolean>(false);
+  const [newTagText, setNewTagText] = useState<string>('');
+
+  const handleAddNewTag = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const clean = newTagText.trim();
+    if (!clean) return;
+    const updated = AppStorage.addQuickCommentTag(clean);
+    setQuickTags(updated);
+    setNewTagText('');
+  };
+
+  const handleDeleteTag = (tagToDelete: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const updated = AppStorage.deleteQuickCommentTag(tagToDelete);
+    setQuickTags(updated);
+  };
+
+  const handleResetTags = () => {
+    const updated = AppStorage.resetQuickCommentTags();
+    setQuickTags(updated);
+  };
 
   // Active price list: uses initialMeasurement.priceSnapshot if present, otherwise current priceList
   const [activePriceList, setActivePriceList] = useState<MasterPriceList>(() => {
@@ -1036,22 +1056,109 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
 
       {/* Comments with quick tags */}
       <div className="bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 space-y-3 shadow-sm">
-        <label className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-400 flex items-center gap-1.5">
-          <FileText className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
-          <span>{t.commentsTitle}</span>
-        </label>
+        <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2">
+          <label className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-400 flex items-center gap-1.5">
+            <FileText className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+            <span>{t.commentsTitle}</span>
+          </label>
 
+          <button
+            type="button"
+            onClick={() => setIsManagingTags((prev) => !prev)}
+            className={`text-[11px] font-semibold px-2 py-1 rounded-lg flex items-center gap-1 transition ${
+              isManagingTags
+                ? 'bg-cyan-600 text-white shadow-xs'
+                : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
+          >
+            {isManagingTags ? (
+              <>
+                <Check className="w-3.5 h-3.5" />
+                <span>Готово</span>
+              </>
+            ) : (
+              <>
+                <Edit3 className="w-3.5 h-3.5" />
+                <span>Налаштувати теги</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Form to add a new quick tag in manage mode */}
+        {isManagingTags && (
+          <form onSubmit={handleAddNewTag} className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2 animate-fadeIn">
+            <div className="flex items-center justify-between text-[11px] font-medium text-slate-600 dark:text-slate-400">
+              <span>Додати власний швидкий коментар:</span>
+              <button
+                type="button"
+                onClick={handleResetTags}
+                className="text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 flex items-center gap-1 text-[10px] underline underline-offset-2"
+                title="Скинути до стандартних тегів"
+              >
+                <RotateCcw className="w-3 h-3" />
+                <span>Скинути до стандартних</span>
+              </button>
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newTagText}
+                onChange={(e) => setNewTagText(e.target.value)}
+                placeholder="Наприклад: Гіпсокартонні короби по периметру"
+                className="flex-1 text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+              />
+              <button
+                type="submit"
+                disabled={!newTagText.trim()}
+                className="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white rounded-lg text-xs font-bold flex items-center gap-1 transition shrink-0 cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Додати</span>
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* Quick tags list */}
         <div className="flex flex-wrap gap-1.5">
-          {QUICK_COMMENT_TAGS_UK.map((tag) => (
-            <button
+          {quickTags.map((tag) => (
+            <div
               key={tag}
-              type="button"
-              onClick={() => handleAddCommentTag(tag)}
-              className="text-[11px] px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 dark:border-slate-700 transition"
+              className={`inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg border transition ${
+                isManagingTags
+                  ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 dark:border-slate-700 cursor-pointer active:scale-95'
+              }`}
+              onClick={() => {
+                if (!isManagingTags) handleAddCommentTag(tag);
+              }}
             >
-              + {tag}
-            </button>
+              <span>{isManagingTags ? tag : `+ ${tag}`}</span>
+              {isManagingTags && (
+                <button
+                  type="button"
+                  onClick={(e) => handleDeleteTag(tag, e)}
+                  className="p-0.5 rounded hover:bg-rose-100 dark:hover:bg-rose-950 text-rose-600 dark:text-rose-400 transition ml-0.5 cursor-pointer"
+                  title="Видалити цей швидкий коментар"
+                >
+                  <X className="w-3.5 h-3.5 stroke-[2.5]" />
+                </button>
+              )}
+            </div>
           ))}
+
+          {!isManagingTags && (
+            <button
+              type="button"
+              onClick={() => setIsManagingTags(true)}
+              className="text-[11px] px-2 py-1 rounded-lg border border-dashed border-cyan-400 dark:border-cyan-700 text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-950/40 font-medium flex items-center gap-1 transition cursor-pointer"
+              title="Додати новий швидкий коментар або налаштувати список"
+            >
+              <Plus className="w-3 h-3" />
+              <span>Свій тег</span>
+            </button>
+          )}
         </div>
 
         <textarea

@@ -17,7 +17,19 @@ const STORAGE_KEYS = {
   MASTER_PROFILE: 'potolok_pro_master_profile_v2_ua',
   REGION_CODE: 'potolok_pro_region_code_v1',
   CURRENCY_CODE: 'potolok_pro_currency_code_v1',
+  QUICK_COMMENT_TAGS: 'potolok_pro_quick_comment_tags_v1',
 };
+
+export const DEFAULT_QUICK_TAGS = [
+  'Керамограніт на стінах (алмазне свердління)',
+  'Прихована проводка під стелею',
+  'Перепад плит перекриття',
+  'Стояк опалення впритул до стіни',
+  'Слабка штукатурка (потрібен брус)',
+  'Висока стеля >3.0м',
+  'Вентканал / витяжка у стелі',
+  'Прихована ніша під штори (ПК-5)',
+];
 
 // Initial realistic demo seed data for Ukraine region
 const SEED_CLIENTS: Client[] = [
@@ -352,6 +364,46 @@ export class AppStorage {
     localStorage.setItem(STORAGE_KEYS.CURRENCY_CODE, code);
   }
 
+  static getQuickCommentTags(): string[] {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.QUICK_COMMENT_TAGS);
+      if (!data) {
+        localStorage.setItem(STORAGE_KEYS.QUICK_COMMENT_TAGS, JSON.stringify(DEFAULT_QUICK_TAGS));
+        return DEFAULT_QUICK_TAGS;
+      }
+      const parsed = JSON.parse(data);
+      return Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_QUICK_TAGS;
+    } catch {
+      return DEFAULT_QUICK_TAGS;
+    }
+  }
+
+  static saveQuickCommentTags(tags: string[]): void {
+    localStorage.setItem(STORAGE_KEYS.QUICK_COMMENT_TAGS, JSON.stringify(tags));
+  }
+
+  static addQuickCommentTag(tag: string): string[] {
+    const clean = tag.trim();
+    if (!clean) return this.getQuickCommentTags();
+    const current = this.getQuickCommentTags();
+    if (current.includes(clean)) return current;
+    const updated = [...current, clean];
+    this.saveQuickCommentTags(updated);
+    return updated;
+  }
+
+  static deleteQuickCommentTag(tag: string): string[] {
+    const current = this.getQuickCommentTags();
+    const updated = current.filter((t) => t !== tag);
+    this.saveQuickCommentTags(updated);
+    return updated;
+  }
+
+  static resetQuickCommentTags(): string[] {
+    this.saveQuickCommentTags(DEFAULT_QUICK_TAGS);
+    return DEFAULT_QUICK_TAGS;
+  }
+
   static exportFullBackup(): string {
     const backup = {
       version: '2.0-ua',
@@ -363,6 +415,7 @@ export class AppStorage {
       masterProfile: this.getMasterProfile(),
       regionCode: this.getRegionCode(),
       currencyCode: this.getCurrencyCode(),
+      quickCommentTags: this.getQuickCommentTags(),
     };
     return JSON.stringify(backup, null, 2);
   }
@@ -391,6 +444,9 @@ export class AppStorage {
       if (parsed.currencyCode && (parsed.currencyCode === 'USD' || parsed.currencyCode === 'EUR' || parsed.currencyCode === 'UAH')) {
         this.saveCurrencyCode(parsed.currencyCode);
       }
+      if (Array.isArray(parsed.quickCommentTags)) {
+        this.saveQuickCommentTags(parsed.quickCommentTags);
+      }
       return true;
     } catch (e) {
       console.error('Import error:', e);
@@ -403,5 +459,6 @@ export class AppStorage {
     localStorage.setItem(STORAGE_KEYS.OBJECTS, JSON.stringify(SEED_OBJECTS));
     localStorage.setItem(STORAGE_KEYS.MEASUREMENTS, JSON.stringify(SEED_MEASUREMENTS));
     localStorage.setItem(STORAGE_KEYS.PRICE_LIST, JSON.stringify(DEFAULT_PRICE_LIST));
+    localStorage.setItem(STORAGE_KEYS.QUICK_COMMENT_TAGS, JSON.stringify(DEFAULT_QUICK_TAGS));
   }
 }
