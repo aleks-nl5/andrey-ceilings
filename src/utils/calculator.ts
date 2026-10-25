@@ -99,6 +99,51 @@ export function calculateRoomGeometry(params: {
   }
 
   // Custom / irregular room
+  if (params.customSides && params.customSides.length >= 3) {
+    const sides = params.customSides;
+    const n = sides.length;
+    const perimeter = Math.round(sides.reduce((sum, s) => sum + Math.max(0.05, s), 0) * 100) / 100;
+    
+    // Calculate area: if 4 sides with diagonal
+    let area = 0;
+    if (n === 4 && params.diagonal1 && params.diagonal1 > 0) {
+      const a = sides[0], b = sides[1], c = sides[2], d = sides[3], diag = params.diagonal1;
+      const s1 = (a + b + diag) / 2;
+      const area1 = Math.sqrt(Math.max(0, s1 * (s1 - a) * (s1 - b) * (s1 - diag)));
+      const s2 = (c + d + diag) / 2;
+      const area2 = Math.sqrt(Math.max(0, s2 * (s2 - c) * (s2 - d) * (s2 - diag)));
+      if (!isNaN(area1) && !isNaN(area2) && area1 + area2 > 0) {
+        area = Math.round((area1 + area2) * 100) / 100;
+      }
+    }
+    
+    // If area not set via diagonal: Shoelace formula on reconstructed polygon
+    if (area <= 0) {
+      const totalP = perimeter || 1;
+      let currAngle = 0;
+      const angles = sides.map((s) => {
+        const a = currAngle;
+        currAngle += (s / totalP) * Math.PI * 2;
+        return a;
+      });
+      const avgR = totalP / (2 * Math.PI);
+      const pts = angles.map((ang) => [avgR * Math.cos(ang), avgR * Math.sin(ang)]);
+      let areaSum = 0;
+      for (let i = 0; i < n; i++) {
+        const cur = pts[i];
+        const next = pts[(i + 1) % n];
+        areaSum += cur[0] * next[1] - next[0] * cur[1];
+      }
+      area = Math.round((Math.abs(areaSum) / 2) * 100) / 100;
+    }
+
+    return {
+      area: Math.max(0.5, area),
+      perimeter,
+      cornersCount: n,
+    };
+  }
+
   const l = Math.max(0.1, length || 4);
   const w = Math.max(0.1, width || 3);
   const a = sideA ?? l;
@@ -120,9 +165,7 @@ export function calculateRoomGeometry(params: {
 
   const perimeter = Math.round((a + b + c + d) * 100) / 100;
   const area = Math.round(customArea * 100) / 100;
-  const cornersCount = (params.customSides && params.customSides.length >= 4) 
-    ? params.customSides.length 
-    : 5;
+  const cornersCount = 4;
 
   return { area, perimeter, cornersCount };
 }

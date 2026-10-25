@@ -12,6 +12,7 @@ interface RoomBlueprintProps {
   sideD?: number;
   sideE?: number;
   sideF?: number;
+  customSides?: number[];
   diagonal1?: number;
   diagonal2?: number;
   area: number;
@@ -33,6 +34,7 @@ export const RoomBlueprint: React.FC<RoomBlueprintProps> = ({
   sideD,
   sideE,
   sideF,
+  customSides,
   diagonal1,
   diagonal2,
   area,
@@ -134,8 +136,52 @@ export const RoomBlueprint: React.FC<RoomBlueprintProps> = ({
       { x: (p5[0] + p6[0]) / 2, y: p5[1] + 18, text: `E: ${c}м` },
       { x: p6[0] - 12, y: (p6[1] + p1[1]) / 2 + 4, text: `F: ${b}м`, align: 'right' },
     ];
+  } else if (customSides && customSides.length >= 3) {
+    // Dynamic multi-sided custom polygon
+    const n = customSides.length;
+    const totalP = customSides.reduce((sum, s) => sum + s, 0) || 1;
+    let currAngle = -Math.PI / 2;
+    const angles: number[] = [];
+    for (let i = 0; i < n; i++) {
+      angles.push(currAngle);
+      currAngle += (customSides[i] / totalP) * Math.PI * 2;
+    }
+    const cX = svgWidth / 2;
+    const cY = svgHeight / 2;
+    const maxR = Math.min(innerW / 2, innerH / 2) * 0.85;
+    polygonPoints = angles.map((ang) => [
+      Math.round((cX + maxR * Math.cos(ang)) * 10) / 10,
+      Math.round((cY + maxR * Math.sin(ang)) * 10) / 10,
+    ]);
+    pointsStr = polygonPoints.map((p) => p.join(',')).join(' ');
+
+    if (n === 4) {
+      diagonalsToDraw = [
+        { x1: polygonPoints[0][0], y1: polygonPoints[0][1], x2: polygonPoints[2][0], y2: polygonPoints[2][1], label: diagonal1 ? `d1=${diagonal1}м` : undefined },
+        { x1: polygonPoints[1][0], y1: polygonPoints[1][1], x2: polygonPoints[3][0], y2: polygonPoints[3][1], label: diagonal2 ? `d2=${diagonal2}м` : undefined },
+      ];
+    }
+
+    sideLabels = polygonPoints.map((p, idx) => {
+      const next = polygonPoints[(idx + 1) % n];
+      const midX = (p[0] + next[0]) / 2;
+      const midY = (p[1] + next[1]) / 2;
+      const startLetter = String.fromCharCode(65 + idx);
+      const endLetter = String.fromCharCode(65 + ((idx + 1) % n));
+      const lenM = customSides[idx];
+      const angle = Math.atan2(next[1] - p[1], next[0] - p[0]);
+      const normalX = -Math.sin(angle) * 16;
+      const normalY = Math.cos(angle) * 16;
+
+      return {
+        x: midX + normalX,
+        y: midY + normalY + 4,
+        text: `${startLetter}-${endLetter}: ${lenM}м`,
+        align: 'center' as const,
+      };
+    });
   } else {
-    // Custom trapezoid / irregular room
+    // Custom trapezoid / irregular room fallback
     const boxW = innerW * 0.9;
     const boxH = innerH * 0.85;
     const startX = padding + innerW * 0.05;

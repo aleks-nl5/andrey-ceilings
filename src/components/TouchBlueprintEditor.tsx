@@ -40,6 +40,7 @@ interface TouchBlueprintEditorProps {
   sideD?: number;
   sideE?: number;
   sideF?: number;
+  customSides?: number[];
   diagonal1?: number;
   diagonal2?: number;
   options: Partial<RoomOptions>;
@@ -52,10 +53,12 @@ interface TouchBlueprintEditorProps {
     sideD?: number;
     sideE?: number;
     sideF?: number;
+    customSides?: number[];
     diagonal1?: number;
     diagonal2?: number;
     area: number;
     perimeter: number;
+    cornersCount?: number;
   }) => void;
   className?: string;
 }
@@ -71,6 +74,7 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
   sideD,
   sideE,
   sideF,
+  customSides,
   diagonal1,
   diagonal2,
   options,
@@ -154,6 +158,23 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
         { id: 'v-4', label: 'E', x: startX + (a - e) * ppmL, y: startY + b * ppmL },
         { id: 'v-5', label: 'F', x: startX, y: startY + b * ppmL },
       ]);
+    } else if (customSides && customSides.length >= 3) {
+      const n = customSides.length;
+      const totalP = customSides.reduce((sum, s) => sum + s, 0) || 1;
+      let currAngle = -Math.PI / 2;
+      const angles: number[] = [];
+      for (let i = 0; i < n; i++) {
+        angles.push(currAngle);
+        currAngle += (customSides[i] / totalP) * Math.PI * 2;
+      }
+      const maxR = Math.min(availW / 2, availH / 2) * 0.85;
+      const customVerts: TouchPoint[] = angles.map((ang, i) => ({
+        id: `v-${i}`,
+        label: String.fromCharCode(65 + i),
+        x: Math.round((centerX + maxR * Math.cos(ang)) * 10) / 10,
+        y: Math.round((centerY + maxR * Math.sin(ang)) * 10) / 10,
+      }));
+      setVertices(customVerts);
     } else {
       // Custom trapezoid / multi-corner
       const boxW = l * ppm;
@@ -205,7 +226,7 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
 
     setFixtures(newFixtures);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shape]);
+  }, [shape, customSides]);
 
   // Only re-initialize when shape changes or initial mount, NOT on every dragged dimension change!
   useEffect(() => {
@@ -214,6 +235,15 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
       initVertices();
     }
   }, [shape, initVertices]);
+
+  // Synchronize when customSides count changes from parent (adding or removing sides)
+  useEffect(() => {
+    if (shape === 'custom' && customSides && customSides.length >= 3) {
+      if (customSides.length !== vertices.length && !activeDragId) {
+        initVertices();
+      }
+    }
+  }, [shape, customSides, vertices.length, activeDragId, initVertices]);
 
   // Zoom handlers
   const handleZoomIn = () => setZoomLevel((prev) => Math.min(2.5, Math.round((prev + 0.15) * 100) / 100));
@@ -325,10 +355,12 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
         sideD: metrics.sides[3],
         sideE: metrics.sides[4],
         sideF: metrics.sides[5],
+        customSides: metrics.sides,
         diagonal1: d1,
         diagonal2: d2,
         area: metrics.area,
         perimeter: metrics.perimeter,
+        cornersCount: updatedVertices.length,
       });
     } else if (dragType === 'fixture') {
       setFixtures((prev) =>
@@ -352,7 +384,7 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
 
   // Add corner (vertex) into polygon
   const handleAddCorner = () => {
-    if (vertices.length >= 10) return;
+    if (vertices.length >= 12) return;
     const lastV = vertices[vertices.length - 1];
     const firstV = vertices[0];
     const midX = (lastV.x + firstV.x) / 2 + 20;
@@ -373,8 +405,10 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
     onDimensionsChange({
       length: metrics.sides[0] || initialLength,
       width: metrics.sides[1] || initialWidth,
+      customSides: metrics.sides,
       area: metrics.area,
       perimeter: metrics.perimeter,
+      cornersCount: nextList.length,
     });
   };
 
@@ -394,8 +428,10 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
     onDimensionsChange({
       length: metrics.sides[0] || initialLength,
       width: metrics.sides[1] || initialWidth,
+      customSides: metrics.sides,
       area: metrics.area,
       perimeter: metrics.perimeter,
+      cornersCount: relabeled.length,
     });
   };
 

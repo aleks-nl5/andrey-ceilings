@@ -11,7 +11,12 @@ import {
   FileSpreadsheet,
   Ruler,
   SlidersHorizontal,
-  Plus
+  Plus,
+  Grid,
+  Square,
+  Maximize2,
+  Move,
+  Trash2
 } from 'lucide-react';
 import { 
   MaterialType, 
@@ -19,17 +24,21 @@ import {
   ProfileType, 
   MasterPriceList, 
   RoomOptions,
+  RoomShape,
   ObjectProject,
   Client 
 } from '../types/database';
 import { 
   calculateCeilingCost, 
+  calculateRoomGeometry,
   getMaterialLabel, 
   getComplexityLabel, 
   getProfileLabel,
   generateClientOfferText 
 } from '../utils/calculator';
 import { NumericInput } from './NumericInput';
+import { TouchBlueprintEditor } from './TouchBlueprintEditor';
+import { RoomBlueprint } from './RoomBlueprint';
 import { Translations, Locale } from '../i18n/translations';
 
 interface CalculatorModuleProps {
@@ -61,17 +70,94 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({
   clients = [],
   onSaveToProject,
 }) => {
-  // Mode: 'by_dimensions' (length x width) vs 'by_area' (direct square meters)
+  // Mode: 'by_dimensions' (by shape & blueprint) vs 'by_area' (direct square meters)
   const [inputMode, setInputMode] = useState<'by_dimensions' | 'by_area'>('by_dimensions');
+
+  // Shape and geometry
+  const [shape, setShape] = useState<RoomShape>('rectangle');
+  const [height, setHeight] = useState<number>(2.7);
+  const [isTouchEditMode, setIsTouchEditMode] = useState<boolean>(true);
 
   // Dimension inputs
   const [length, setLength] = useState<number>(4.8);
   const [width, setWidth] = useState<number>(3.5);
 
+  // L-Shape sides
+  const [sideA, setSideA] = useState<number>(5.0);
+  const [sideB, setSideB] = useState<number>(4.0);
+  const [sideC, setSideC] = useState<number>(2.5);
+  const [sideD, setSideD] = useState<number>(2.0);
+  const [sideE, setSideE] = useState<number>(2.5);
+  const [sideF, setSideF] = useState<number>(2.0);
+
+  // Custom shape sides (Складна форма)
+  const [customSides, setCustomSides] = useState<number[]>([4.8, 3.5, 4.0, 3.2]);
+
+  const handleAddCustomSide = () => {
+    if (customSides.length >= 12) return;
+    const avg = Math.round((customSides.reduce((a, b) => a + b, 0) / customSides.length) * 10) / 10 || 2.5;
+    setCustomSides((prev) => [...prev, avg]);
+  };
+
+  const handleRemoveCustomSide = (indexToRemove: number) => {
+    if (customSides.length <= 3) return;
+    setCustomSides((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+  };
+
+  const handleCustomSideChange = (index: number, newLength: number) => {
+    setCustomSides((prev) => {
+      const next = [...prev];
+      next[index] = Math.max(0.1, newLength);
+      return next;
+    });
+  };
+
   // Direct area input
   const [directArea, setDirectArea] = useState<number>(18.5);
   const [customPerimeter, setCustomPerimeter] = useState<boolean>(false);
   const [manualPerimeter, setManualPerimeter] = useState<number>(17.5);
+
+  // Geometry calculation from shape and dimensions
+  const computedGeometry = calculateRoomGeometry({
+    shape,
+    length,
+    width,
+    height,
+    sideA,
+    sideB,
+    sideC,
+    sideD,
+    sideE,
+    sideF,
+    customSides: shape === 'custom' ? customSides : undefined,
+  });
+
+  const handleTouchDimensionsChange = (params: {
+    length: number;
+    width: number;
+    sideA?: number;
+    sideB?: number;
+    sideC?: number;
+    sideD?: number;
+    sideE?: number;
+    sideF?: number;
+    customSides?: number[];
+    area: number;
+    perimeter: number;
+    cornersCount?: number;
+  }) => {
+    if (params.length) setLength(params.length);
+    if (params.width) setWidth(params.width);
+    if (params.sideA !== undefined) setSideA(params.sideA);
+    if (params.sideB !== undefined) setSideB(params.sideB);
+    if (params.sideC !== undefined) setSideC(params.sideC);
+    if (params.sideD !== undefined) setSideD(params.sideD);
+    if (params.sideE !== undefined) setSideE(params.sideE);
+    if (params.sideF !== undefined) setSideF(params.sideF);
+    if (params.customSides && params.customSides.length >= 3 && shape === 'custom') {
+      setCustomSides(params.customSides);
+    }
+  };
 
   // Compute available canvases: standard without deletedStandardKeys + customItems
   const availableCanvases = [
@@ -133,16 +219,20 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({
   const [copied, setCopied] = useState<boolean>(false);
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
 
-  // Effective area and perimeter calculation
+  // Effective area, perimeter, and corners calculation
   const effectiveArea = inputMode === 'by_dimensions'
-    ? Math.round(length * width * 100) / 100
+    ? computedGeometry.area
     : directArea;
 
   const effectivePerimeter = inputMode === 'by_dimensions'
-    ? Math.round(2 * (length + width) * 10) / 10
+    ? computedGeometry.perimeter
     : customPerimeter
       ? manualPerimeter
       : Math.round(2 * (Math.sqrt(directArea * 1.3) + directArea / Math.sqrt(directArea * 1.3)) * 10) / 10;
+
+  const effectiveCorners = inputMode === 'by_dimensions'
+    ? computedGeometry.cornersCount
+    : 4;
 
   const currentOptions: RoomOptions = {
     lightLinesMeters,
@@ -152,7 +242,7 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({
     spotsGX53Count,
     pipePassCount,
     curtainNicheMeters,
-    extraCorners: 0,
+    extraCorners: Math.max(0, effectiveCorners - 4),
     hardWallMeters,
   };
 
@@ -283,54 +373,307 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({
             </div>
 
             {inputMode === 'by_dimensions' ? (
-              <div className="space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <NumericInput
-                    label={t.length}
-                    value={length}
-                    onChange={setLength}
-                    unit="м"
-                    min={0.5}
-                    steppers={[-0.5, -0.1, 0.1, 0.5]}
-                    numpadTitle={t.length}
-                  />
-                  <NumericInput
-                    label={t.width}
-                    value={width}
-                    onChange={setWidth}
-                    unit="м"
-                    min={0.5}
-                    steppers={[-0.5, -0.1, 0.1, 0.5]}
-                    numpadTitle={t.width}
-                  />
+              <div className="space-y-4">
+                {/* 1. Room Shape Selector */}
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    {t.roomShape}
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {[
+                      { id: 'rectangle', label: t.shapeRectangle, icon: Grid },
+                      { id: 'square', label: t.shapeSquare, icon: Square },
+                      { id: 'l_shaped', label: t.shapeLShaped, icon: Layers },
+                      { id: 'custom', label: t.shapeCustom, icon: Maximize2 },
+                    ].map((item) => {
+                      const Icon = item.icon;
+                      const isSelected = shape === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => setShape(item.id as RoomShape)}
+                          className={`flex flex-col items-center justify-center p-2.5 rounded-xl border text-xs font-medium transition gap-1.5 ${
+                            isSelected
+                              ? 'border-cyan-500 bg-cyan-50 text-cyan-800 shadow-md ring-2 ring-cyan-500 dark:bg-cyan-950/40 dark:text-cyan-300'
+                              : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-950 hover:border-slate-300 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-400 dark:hover:border-slate-700 dark:hover:text-slate-200 shadow-sm'
+                          }`}
+                        >
+                          <Icon className={`w-4 h-4 ${isSelected ? 'text-cyan-600 dark:text-cyan-400' : 'text-slate-400 dark:text-slate-500'}`} />
+                          <span className="font-semibold text-[11px]">{item.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
-                {/* Quick presets for common room sizes */}
-                <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                  <span className="text-[11px] text-slate-500 mr-1">Типові кімнати:</span>
-                  {[
-                    { l: 3.0, w: 3.0, label: '3×3 (9м²)' },
-                    { l: 4.0, w: 3.0, label: '4×3 (12м²)' },
-                    { l: 4.5, w: 3.5, label: '4.5×3.5 (15.8м²)' },
-                    { l: 5.0, w: 4.0, label: '5×4 (20м²)' },
-                    { l: 6.0, w: 4.5, label: '6×4.5 (27м²)' },
-                  ].map((preset, idx) => (
+                {/* 2. Ceiling Blueprint Visualizer */}
+                <div className="space-y-2 pt-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                      <Move className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+                      <span>Схема та креслення стелі</span>
+                    </span>
+
                     <button
-                      key={idx}
                       type="button"
-                      onClick={() => {
-                        setLength(preset.l);
-                        setWidth(preset.w);
-                      }}
-                      className="text-xs px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 font-mono transition dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 dark:border-transparent"
+                      onClick={() => setIsTouchEditMode(!isTouchEditMode)}
+                      className="text-xs text-cyan-600 dark:text-cyan-400 hover:underline font-semibold cursor-pointer"
                     >
-                      {preset.label}
+                      {isTouchEditMode ? 'Класичний вид' : 'Сенсорне редагування (Touch)'}
                     </button>
-                  ))}
+                  </div>
+
+                  {isTouchEditMode ? (
+                    <TouchBlueprintEditor
+                      shape={shape}
+                      initialLength={length}
+                      initialWidth={width}
+                      initialHeight={height}
+                      sideA={sideA}
+                      sideB={sideB}
+                      sideC={sideC}
+                      sideD={sideD}
+                      sideE={sideE}
+                      sideF={sideF}
+                      customSides={shape === 'custom' ? customSides : undefined}
+                      options={currentOptions}
+                      onDimensionsChange={handleTouchDimensionsChange}
+                    />
+                  ) : (
+                    <RoomBlueprint
+                      shape={shape}
+                      length={length}
+                      width={width}
+                      height={height}
+                      sideA={sideA}
+                      sideB={sideB}
+                      sideC={sideC}
+                      sideD={sideD}
+                      sideE={sideE}
+                      sideF={sideF}
+                      customSides={shape === 'custom' ? customSides : undefined}
+                      area={effectiveArea}
+                      perimeter={effectivePerimeter}
+                      options={currentOptions}
+                    />
+                  )}
                 </div>
 
-                {/* Computed Area & Perimeter summary */}
-                <div className="grid grid-cols-2 gap-2 pt-1 text-center">
+                {/* 3. Shape Dimensions Inputs */}
+                {shape === 'square' ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                    <NumericInput
+                      label="Сторона квадрата"
+                      value={length}
+                      onChange={(val) => {
+                        setLength(val);
+                        setWidth(val);
+                      }}
+                      unit="м"
+                      min={0.1}
+                      steppers={[-0.5, -0.1, 0.1, 0.5]}
+                      numpadTitle="Сторона квадрата"
+                    />
+                    <NumericInput
+                      label={t.height}
+                      value={height}
+                      onChange={setHeight}
+                      unit="м"
+                      min={1.5}
+                      steppers={[-0.1, 0.1]}
+                      numpadTitle={t.height}
+                    />
+                  </div>
+                ) : shape === 'l_shaped' ? (
+                  <div className="space-y-3 pt-2">
+                    <span className="text-xs text-slate-500 dark:text-slate-400 block font-medium">
+                      Сторони L-подібного приміщення:
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <NumericInput
+                        label="Сторона A (Довжина)"
+                        value={sideA}
+                        onChange={setSideA}
+                        unit="м"
+                        min={0.1}
+                        steppers={[-0.5, -0.1, 0.1, 0.5]}
+                      />
+                      <NumericInput
+                        label="Сторона B (Ширина)"
+                        value={sideB}
+                        onChange={setSideB}
+                        unit="м"
+                        min={0.1}
+                        steppers={[-0.5, -0.1, 0.1, 0.5]}
+                      />
+                      <NumericInput
+                        label="Сторона C (Виступ 1)"
+                        value={sideC}
+                        onChange={setSideC}
+                        unit="м"
+                        min={0.1}
+                        steppers={[-0.5, -0.1, 0.1, 0.5]}
+                      />
+                      <NumericInput
+                        label="Сторона D (Виступ 2)"
+                        value={sideD}
+                        onChange={setSideD}
+                        unit="м"
+                        min={0.1}
+                        steppers={[-0.5, -0.1, 0.1, 0.5]}
+                      />
+                      <NumericInput
+                        label="Сторона E (Захід 1)"
+                        value={sideE}
+                        onChange={setSideE}
+                        unit="м"
+                        min={0.1}
+                        steppers={[-0.5, -0.1, 0.1, 0.5]}
+                      />
+                      <NumericInput
+                        label="Сторона F (Захід 2)"
+                        value={sideF}
+                        onChange={setSideF}
+                        unit="м"
+                        min={0.1}
+                        steppers={[-0.5, -0.1, 0.1, 0.5]}
+                      />
+                    </div>
+                    <div className="max-w-xs">
+                      <NumericInput
+                        label={t.height}
+                        value={height}
+                        onChange={setHeight}
+                        unit="м"
+                        min={1.5}
+                        steppers={[-0.1, 0.1]}
+                      />
+                    </div>
+                  </div>
+                ) : shape === 'custom' ? (
+                  <div className="space-y-4 pt-2">
+                    <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+                      <div className="flex items-center gap-1.5">
+                        <Maximize2 className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+                        <span className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
+                          Довжини сторін складної форми ({customSides.length} сторін)
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleAddCustomSide}
+                        disabled={customSides.length >= 12}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-cyan-50 dark:bg-cyan-950/70 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800 hover:bg-cyan-100 dark:hover:bg-cyan-900/60 transition active:scale-95 cursor-pointer disabled:opacity-50"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>+ Додати сторону</span>
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                      {customSides.map((sideLen, idx) => {
+                        const startLetter = String.fromCharCode(65 + idx);
+                        const endLetter = String.fromCharCode(65 + ((idx + 1) % customSides.length));
+                        return (
+                          <div key={idx} className="relative group">
+                            <NumericInput
+                              label={`Сторона ${startLetter}-${endLetter}`}
+                              value={sideLen}
+                              onChange={(val) => handleCustomSideChange(idx, val)}
+                              unit="м"
+                              min={0.1}
+                              steppers={[-0.5, -0.1, 0.1, 0.5]}
+                              numpadTitle={`Сторона ${startLetter}-${endLetter}`}
+                            />
+                            {customSides.length > 3 && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveCustomSide(idx)}
+                                title={`Видалити сторону ${startLetter}-${endLetter}`}
+                                className="absolute top-2 right-2 p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/60 transition active:scale-90"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="max-w-xs pt-1">
+                      <NumericInput
+                        label={t.height}
+                        value={height}
+                        onChange={setHeight}
+                        unit="м"
+                        min={1.5}
+                        steppers={[-0.1, 0.1]}
+                        numpadTitle={t.height}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  /* Rectangle (Default) */
+                  <div className="space-y-3 pt-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <NumericInput
+                        label={t.length}
+                        value={length}
+                        onChange={setLength}
+                        unit="м"
+                        min={0.5}
+                        steppers={[-0.5, -0.1, 0.1, 0.5]}
+                        numpadTitle={t.length}
+                      />
+                      <NumericInput
+                        label={t.width}
+                        value={width}
+                        onChange={setWidth}
+                        unit="м"
+                        min={0.5}
+                        steppers={[-0.5, -0.1, 0.1, 0.5]}
+                        numpadTitle={t.width}
+                      />
+                      <NumericInput
+                        label={t.height}
+                        value={height}
+                        onChange={setHeight}
+                        unit="м"
+                        min={1.5}
+                        steppers={[-0.1, 0.1]}
+                        numpadTitle={t.height}
+                      />
+                    </div>
+
+                    {/* Quick presets for common rectangle sizes */}
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 mr-1">Типові кімнати:</span>
+                      {[
+                        { l: 3.0, w: 3.0, label: '3×3 (9м²)' },
+                        { l: 4.0, w: 3.0, label: '4×3 (12м²)' },
+                        { l: 4.5, w: 3.5, label: '4.5×3.5 (15.8м²)' },
+                        { l: 5.0, w: 4.0, label: '5×4 (20м²)' },
+                        { l: 6.0, w: 4.5, label: '6×4.5 (27м²)' },
+                      ].map((preset, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            setLength(preset.l);
+                            setWidth(preset.w);
+                          }}
+                          className="text-xs px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 font-mono transition dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 dark:border-transparent cursor-pointer"
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Computed Area, Perimeter & Corners summary */}
+                <div className="grid grid-cols-3 gap-2 pt-2 text-center">
                   <div className="bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800">
                     <span className="text-[10px] text-slate-500 dark:text-slate-400 block">{t.area}</span>
                     <strong className="text-base font-mono text-cyan-700 dark:text-cyan-400">{effectiveArea} м²</strong>
@@ -338,6 +681,12 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({
                   <div className="bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800">
                     <span className="text-[10px] text-slate-500 dark:text-slate-400 block">{t.perimeter}</span>
                     <strong className="text-base font-mono text-cyan-700 dark:text-cyan-400">{effectivePerimeter} м.п.</strong>
+                  </div>
+                  <div className="bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Кути</span>
+                    <strong className="text-base font-mono text-cyan-700 dark:text-cyan-400">
+                      {effectiveCorners} {effectiveCorners > 4 ? `(+${effectiveCorners - 4})` : ''}
+                    </strong>
                   </div>
                 </div>
               </div>

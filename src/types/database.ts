@@ -76,6 +76,7 @@ export interface RoomMeasurement {
   sideD?: number;
   sideE?: number;
   sideF?: number;
+  customSides?: number[];         // Довжини сторін для складної форми [A-B, B-C, C-D...]
   diagonal1?: number;             // Диагональ 1, м
   diagonal2?: number;             // Диагональ 2, м
   

@@ -167,6 +167,38 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
   const [diagonal1, setDiagonal1] = useState<number>(initialMeasurement?.diagonal1 || 0);
   const [diagonal2, setDiagonal2] = useState<number>(initialMeasurement?.diagonal2 || 0);
 
+  // Custom multi-side shape (Складна форма)
+  const [customSides, setCustomSides] = useState<number[]>(() => {
+    if (initialMeasurement?.customSides && initialMeasurement.customSides.length >= 3) {
+      return initialMeasurement.customSides;
+    }
+    return [
+      initialMeasurement?.sideA || initialMeasurement?.length || 4.2,
+      initialMeasurement?.sideB || initialMeasurement?.width || 3.5,
+      initialMeasurement?.sideC || 3.8,
+      initialMeasurement?.sideD || 3.1,
+    ];
+  });
+
+  const handleAddCustomSide = () => {
+    if (customSides.length >= 12) return;
+    const avg = Math.round((customSides.reduce((a, b) => a + b, 0) / customSides.length) * 10) / 10 || 2.5;
+    setCustomSides((prev) => [...prev, avg]);
+  };
+
+  const handleRemoveCustomSide = (indexToRemove: number) => {
+    if (customSides.length <= 3) return;
+    setCustomSides((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+  };
+
+  const handleCustomSideChange = (index: number, newLength: number) => {
+    setCustomSides((prev) => {
+      const next = [...prev];
+      next[index] = Math.max(0.1, newLength);
+      return next;
+    });
+  };
+
   // Manual direct override for Area and Perimeter
   const [isManualAreaPerimeter, setIsManualAreaPerimeter] = useState<boolean>(false);
   const [manualArea, setManualArea] = useState<number>(initialMeasurement?.area || 14.4);
@@ -265,6 +297,7 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
     sideD,
     sideE,
     sideF,
+    customSides: shape === 'custom' ? customSides : undefined,
     diagonal1: diagonal1 > 0 ? diagonal1 : undefined,
     diagonal2: diagonal2 > 0 ? diagonal2 : undefined,
   });
@@ -281,7 +314,10 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
     materialType,
     complexity,
     profileType,
-    options,
+    options: {
+      ...options,
+      extraCorners: Math.max(0, effectiveCorners - 4),
+    },
     customOptions: customOptionsList,
     priceList: activePriceList,
   });
@@ -301,10 +337,12 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
     sideD?: number;
     sideE?: number;
     sideF?: number;
+    customSides?: number[];
     diagonal1?: number;
     diagonal2?: number;
     area: number;
     perimeter: number;
+    cornersCount?: number;
   }) => {
     if (params.length) setLength(params.length);
     if (params.width) setWidth(params.width);
@@ -314,11 +352,15 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
     if (params.sideD !== undefined) setSideD(params.sideD);
     if (params.sideE !== undefined) setSideE(params.sideE);
     if (params.sideF !== undefined) setSideF(params.sideF);
+    if (params.customSides && params.customSides.length >= 3 && shape === 'custom') {
+      setCustomSides(params.customSides);
+    }
     if (params.diagonal1 !== undefined) setDiagonal1(params.diagonal1);
     if (params.diagonal2 !== undefined) setDiagonal2(params.diagonal2);
     if (isManualAreaPerimeter) {
       setManualArea(params.area);
       setManualPerimeter(params.perimeter);
+      if (params.cornersCount) setManualCorners(params.cornersCount);
     }
   };
 
@@ -337,6 +379,7 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
       sideD: shape === 'l_shaped' ? sideD : undefined,
       sideE: shape === 'l_shaped' ? sideE : undefined,
       sideF: shape === 'l_shaped' ? sideF : undefined,
+      customSides: shape === 'custom' ? customSides : undefined,
       diagonal1: diagonal1 > 0 ? diagonal1 : undefined,
       diagonal2: diagonal2 > 0 ? diagonal2 : undefined,
       area: effectiveArea,
@@ -558,6 +601,7 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
             sideD={sideD}
             sideE={sideE}
             sideF={sideF}
+            customSides={shape === 'custom' ? customSides : undefined}
             diagonal1={diagonal1}
             diagonal2={diagonal2}
             options={options}
@@ -575,6 +619,7 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
             sideD={sideD}
             sideE={sideE}
             sideF={sideF}
+            customSides={shape === 'custom' ? customSides : undefined}
             diagonal1={diagonal1}
             diagonal2={diagonal2}
             area={effectiveArea}
@@ -756,25 +801,56 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
             </div>
           </div>
         ) : shape === 'custom' ? (
-          <div className="space-y-3">
-            <span className="text-xs text-slate-400 block font-medium">Габаритні розміри та діагоналі:</span>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <NumericInput
-                label="Габаритна довжина"
-                value={length}
-                onChange={setLength}
-                unit="м"
-                min={0.1}
-                steppers={[-0.5, -0.1, 0.1, 0.5]}
-              />
-              <NumericInput
-                label="Габаритна ширина"
-                value={width}
-                onChange={setWidth}
-                unit="м"
-                min={0.1}
-                steppers={[-0.5, -0.1, 0.1, 0.5]}
-              />
+          <div className="space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-1.5">
+                <Maximize2 className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
+                  Довжини сторін складної форми ({customSides.length} сторін)
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleAddCustomSide}
+                disabled={customSides.length >= 12}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-cyan-50 dark:bg-cyan-950/70 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800 hover:bg-cyan-100 dark:hover:bg-cyan-900/60 transition active:scale-95 cursor-pointer disabled:opacity-50"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>+ Додати сторону</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              {customSides.map((sideLen, idx) => {
+                const startLetter = String.fromCharCode(65 + idx);
+                const endLetter = String.fromCharCode(65 + ((idx + 1) % customSides.length));
+                return (
+                  <div key={idx} className="relative group">
+                    <NumericInput
+                      label={`Сторона ${startLetter}-${endLetter}`}
+                      value={sideLen}
+                      onChange={(val) => handleCustomSideChange(idx, val)}
+                      unit="м"
+                      min={0.1}
+                      steppers={[-0.5, -0.1, 0.1, 0.5]}
+                      numpadTitle={`Сторона ${startLetter}-${endLetter}`}
+                    />
+                    {customSides.length > 3 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveCustomSide(idx)}
+                        title={`Видалити сторону ${startLetter}-${endLetter}`}
+                        className="absolute top-2 right-2 p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/60 transition active:scale-90"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="max-w-xs pt-1">
               <NumericInput
                 label={t.height}
                 value={height}
@@ -782,6 +858,7 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
                 unit="м"
                 min={1.5}
                 steppers={[-0.1, 0.1]}
+                numpadTitle={t.height}
               />
             </div>
           </div>

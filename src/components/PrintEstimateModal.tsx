@@ -540,6 +540,7 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
                           sideF={room.sideF}
                           diagonal1={room.diagonal1}
                           diagonal2={room.diagonal2}
+                          customSides={room.customSides}
                           area={room.area}
                           perimeter={room.perimeter}
                           options={room.options}
