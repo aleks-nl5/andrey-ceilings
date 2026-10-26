@@ -270,15 +270,38 @@ export const RoomBlueprint: React.FC<RoomBlueprintProps> = ({
   const spotsCount = options.spotsGX53Count || 0;
   const spotsToDraw: [number, number][] = [];
   if (spotsCount > 0) {
-    const count = Math.min(spotsCount, 12);
-    for (let i = 0; i < count; i++) {
-      const angle = (i / count) * Math.PI * 2;
-      const rX = Math.min(60, innerW * 0.25);
-      const rY = Math.min(45, innerH * 0.25);
-      spotsToDraw.push([
-        centerX + Math.cos(angle) * rX,
-        centerY + Math.sin(angle) * rY,
-      ]);
+    const count = Math.min(spotsCount, 24);
+    if (count <= 12) {
+      for (let i = 0; i < count; i++) {
+        const angle = (i / count) * Math.PI * 2;
+        const rX = Math.min(65, innerW * 0.26);
+        const rY = Math.min(50, innerH * 0.26);
+        spotsToDraw.push([
+          centerX + Math.cos(angle) * rX,
+          centerY + Math.sin(angle) * rY,
+        ]);
+      }
+    } else {
+      const outerCount = Math.ceil(count * 0.65);
+      const innerCount = count - outerCount;
+      for (let i = 0; i < outerCount; i++) {
+        const angle = (i / outerCount) * Math.PI * 2;
+        const rX = Math.min(75, innerW * 0.32);
+        const rY = Math.min(58, innerH * 0.32);
+        spotsToDraw.push([
+          centerX + Math.cos(angle) * rX,
+          centerY + Math.sin(angle) * rY,
+        ]);
+      }
+      for (let i = 0; i < innerCount; i++) {
+        const angle = (i / innerCount) * Math.PI * 2 + Math.PI / innerCount;
+        const rX = Math.min(42, innerW * 0.17);
+        const rY = Math.min(32, innerH * 0.17);
+        spotsToDraw.push([
+          centerX + Math.cos(angle) * rX,
+          centerY + Math.sin(angle) * rY,
+        ]);
+      }
     }
   }
 
@@ -357,18 +380,77 @@ export const RoomBlueprint: React.FC<RoomBlueprintProps> = ({
             </g>
           ))}
 
-          {/* Curtain Niche (ПК-5) representation if selected */}
-          {options.curtainNicheMeters && options.curtainNicheMeters > 0 && polygonPoints.length >= 2 && (
-            <line
-              x1={polygonPoints[0][0] + 5}
-              y1={polygonPoints[0][1] + 12}
-              x2={polygonPoints[1][0] - 5}
-              y2={polygonPoints[1][1] + 12}
-              stroke={isPrint ? '#000000' : '#a855f7'}
-              strokeWidth="3"
-              strokeDasharray="4,2"
-            />
-          )}
+          {/* Curtain Niche (Ніша штор / карниза) if selected */}
+          {Boolean(options.curtainNicheMeters && options.curtainNicheMeters > 0 && polygonPoints.length >= 2) && (() => {
+            const p0 = polygonPoints[0];
+            const p1 = polygonPoints[1];
+            const angle = Math.atan2(p1[1] - p0[1], p1[0] - p0[0]);
+            const inNormX = -Math.sin(angle) * 16;
+            const inNormY = Math.cos(angle) * 16;
+
+            const x1 = p0[0] + Math.cos(angle) * 8 + inNormX;
+            const y1 = p0[1] + Math.sin(angle) * 8 + inNormY;
+            const x2 = p1[0] - Math.cos(angle) * 8 + inNormX;
+            const y2 = p1[1] - Math.sin(angle) * 8 + inNormY;
+            const midX = (x1 + x2) / 2;
+            const midY = (y1 + y2) / 2;
+
+            return (
+              <g key="curtain-niche">
+                {/* Dashed niche channel */}
+                <line
+                  x1={x1}
+                  y1={y1}
+                  x2={x2}
+                  y2={y2}
+                  stroke={isPrint ? '#000000' : '#c084fc'}
+                  strokeWidth={isPrint ? '2.5' : '3'}
+                  strokeDasharray="6,3"
+                />
+                {/* Left bracket cap */}
+                <line
+                  x1={x1 - inNormX * 0.35}
+                  y1={y1 - inNormY * 0.35}
+                  x2={x1 + inNormX * 0.35}
+                  y2={y1 + inNormY * 0.35}
+                  stroke={isPrint ? '#000000' : '#c084fc'}
+                  strokeWidth="2"
+                />
+                {/* Right bracket cap */}
+                <line
+                  x1={x2 - inNormX * 0.35}
+                  y1={y2 - inNormY * 0.35}
+                  x2={x2 + inNormX * 0.35}
+                  y2={y2 + inNormY * 0.35}
+                  stroke={isPrint ? '#000000' : '#c084fc'}
+                  strokeWidth="2"
+                />
+                {/* Niche label badge */}
+                <rect
+                  x={midX - 46}
+                  y={midY - 8}
+                  width="92"
+                  height="16"
+                  rx="4"
+                  fill={isPrint ? '#ffffff' : '#581c87'}
+                  fillOpacity={isPrint ? '1' : '0.92'}
+                  stroke={isPrint ? '#000000' : '#c084fc'}
+                  strokeWidth="0.8"
+                />
+                <text
+                  x={midX}
+                  y={midY + 3.5}
+                  fill={isPrint ? '#000000' : '#f3e8ff'}
+                  fontSize="9"
+                  fontWeight="bold"
+                  textAnchor="middle"
+                  fontFamily="sans-serif"
+                >
+                  Ніша штор: {options.curtainNicheMeters}м
+                </text>
+              </g>
+            );
+          })()}
 
           {/* Light Lines if selected */}
           {options.lightLinesMeters && options.lightLinesMeters > 0 && (
@@ -428,32 +510,29 @@ export const RoomBlueprint: React.FC<RoomBlueprintProps> = ({
             </text>
           ))}
 
-          {/* Center Info Badge (Area & Canvas Type) */}
-          <g transform={`translate(${centerX - 48}, ${centerY - 22})`}>
-            <rect 
-              width="96" 
-              height="38" 
-              rx="6" 
-              fill={isPrint ? '#ffffff' : '#0f172a'} 
-              fillOpacity={isPrint ? '1' : '0.88'} 
-              stroke={isPrint ? '#000000' : '#334155'} 
-              strokeWidth={isPrint ? '1' : '1.5'} 
-            />
-            <text x="48" y="16" fill={isPrint ? '#000000' : '#f8fafc'} fontSize="12" fontWeight="bold" textAnchor="middle" fontFamily="monospace">
-              {area} м²
-            </text>
-            <text x="48" y="30" fill={isPrint ? '#000000' : '#38bdf8'} fontSize="9" fontWeight="600" textAnchor="middle">
-              {canvasColorName || 'Стеля'}
-            </text>
-          </g>
-
-          {/* Chandelier / Main Light icon at center */}
-          {options.chandeliersCount && options.chandeliersCount > 0 ? (
-            <g transform={`translate(${centerX}, ${centerY + 24})`}>
-              <circle cx="0" cy="0" r="10" fill={isPrint ? '#000000' : '#f59e0b'} />
-              <circle cx="0" cy="0" r="4" fill="#ffffff" />
-            </g>
-          ) : null}
+          {/* Chandelier(s) / Main Light icons at center */}
+          {options.chandeliersCount && options.chandeliersCount > 0 ? (() => {
+            const count = Math.min(options.chandeliersCount, 4);
+            const spacing = 28;
+            const startX = centerX - ((count - 1) * spacing) / 2;
+            return (
+              <g key="chandeliers">
+                {Array.from({ length: count }).map((_, i) => (
+                  <g key={`ch-${i}`} transform={`translate(${startX + i * spacing}, ${centerY})`}>
+                    <circle cx="0" cy="0" r="10" fill={isPrint ? '#000000' : '#f59e0b'} />
+                    <circle cx="0" cy="0" r="4" fill="#ffffff" />
+                    <line x1="-7" y1="-7" x2="7" y2="7" stroke={isPrint ? '#ffffff' : '#78350f'} strokeWidth="1.2" />
+                    <line x1="-7" y1="7" x2="7" y2="-7" stroke={isPrint ? '#ffffff' : '#78350f'} strokeWidth="1.2" />
+                    {count > 1 && (
+                      <text x="0" y="18" fill={isPrint ? '#000000' : '#fbbf24'} fontSize="8" fontWeight="bold" textAnchor="middle">
+                        Л{i + 1}
+                      </text>
+                    )}
+                  </g>
+                ))}
+              </g>
+            );
+          })() : null}
 
           {/* Spotlight dots */}
           {spotsToDraw.map((spot, idx) => (
@@ -463,13 +542,33 @@ export const RoomBlueprint: React.FC<RoomBlueprintProps> = ({
             </g>
           ))}
 
-          {/* Pipe Pass indicator if selected */}
-          {options.pipePassCount && options.pipePassCount > 0 && polygonPoints.length > 0 && (
-            <g transform={`translate(${polygonPoints[0][0] + 16}, ${polygonPoints[0][1] + 16})`}>
-              <circle cx="0" cy="0" r="6" fill={isPrint ? '#000000' : '#ef4444'} />
-              <text x="10" y="3" fill={isPrint ? '#000000' : '#b91c1c'} fontSize="9" fontWeight="bold">Труба</text>
-            </g>
-          )}
+          {/* Pipe Pass indicator(s) if selected */}
+          {options.pipePassCount && options.pipePassCount > 0 && polygonPoints.length > 0 && (() => {
+            const count = Math.min(options.pipePassCount, 6);
+            return (
+              <g key="pipes">
+                {Array.from({ length: count }).map((_, i) => {
+                  const cornerIdx = i % polygonPoints.length;
+                  const pt = polygonPoints[cornerIdx];
+                  const nextPt = polygonPoints[(cornerIdx + 1) % polygonPoints.length];
+                  const angle = Math.atan2(nextPt[1] - pt[1], nextPt[0] - pt[0]);
+                  const shift = 18 + Math.floor(i / polygonPoints.length) * 16;
+                  const px = pt[0] + Math.cos(angle + Math.PI / 4) * shift;
+                  const py = pt[1] + Math.sin(angle + Math.PI / 4) * shift;
+
+                  return (
+                    <g key={`pipe-${i}`} transform={`translate(${px}, ${py})`}>
+                      <circle cx="0" cy="0" r="6" fill={isPrint ? '#000000' : '#ef4444'} stroke={isPrint ? '#ffffff' : '#7f1d1d'} strokeWidth="1" />
+                      <circle cx="0" cy="0" r="2.5" fill="#ffffff" />
+                      <text x="8" y="3.5" fill={isPrint ? '#000000' : '#f87171'} fontSize="8" fontWeight="bold">
+                        {count === 1 ? 'Труба' : `Труба ${i + 1}`}
+                      </text>
+                    </g>
+                  );
+                })}
+              </g>
+            );
+          })()}
         </svg>
       </div>
 
@@ -480,6 +579,12 @@ export const RoomBlueprint: React.FC<RoomBlueprintProps> = ({
             <span className="w-2.5 h-0.5 bg-amber-500 rounded-sm" />
             <span className="font-medium">Діагоналі (розкрій)</span>
           </div>
+          {options.chandeliersCount ? (
+            <div className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-amber-500" />
+              <span>Люстри ({options.chandeliersCount})</span>
+            </div>
+          ) : null}
           {options.spotsGX53Count ? (
             <div className="flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-yellow-500" />

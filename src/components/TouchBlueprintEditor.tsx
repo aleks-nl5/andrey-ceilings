@@ -111,6 +111,17 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
   const [pixelsPerMeter, setPixelsPerMeter] = useState<number>(50);
 
   const lastShapeRef = useRef<string>('');
+  const lastEmittedRef = useRef<{
+    shape?: string;
+    length?: number;
+    width?: number;
+    sideA?: number;
+    sideB?: number;
+    sideC?: number;
+    sideD?: number;
+    sideE?: number;
+    sideF?: number;
+  }>({});
 
   // Initialize vertices based on shape and initial dimensions (only on shape change or manual reset)
   const initVertices = useCallback(() => {
@@ -207,56 +218,176 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
         { id: 'v-3', label: 'D', x: startX, y: startY + boxH - 15 },
       ]);
     }
+  }, [shape, customSides, customPoints]);
 
-    // Initialize draggable light fixtures
+  // Synchronize fixtures whenever options change (chandeliers, spots, pipe passes)
+  useEffect(() => {
+    const cX = vertices.length > 0 
+      ? vertices.reduce((acc, v) => acc + v.x, 0) / vertices.length 
+      : canvasWidth / 2;
+    const cY = vertices.length > 0 
+      ? vertices.reduce((acc, v) => acc + v.y, 0) / vertices.length 
+      : canvasHeight / 2;
+    const availW = canvasWidth - padding * 2;
+    const availH = canvasHeight - padding * 2;
+
     const newFixtures: FixturePoint[] = [];
-    if (options.chandeliersCount && options.chandeliersCount > 0) {
+
+    // Chandeliers
+    const chanCount = Math.min(options.chandeliersCount || 0, 6);
+    if (chanCount === 1) {
       newFixtures.push({
         id: 'fix-chan-1',
         type: 'chandelier',
-        x: centerX,
-        y: centerY,
+        x: cX,
+        y: cY,
         label: 'Люстра',
       });
+    } else if (chanCount > 1) {
+      for (let i = 0; i < chanCount; i++) {
+        const offset = (i - (chanCount - 1) / 2) * 55;
+        newFixtures.push({
+          id: `fix-chan-${i + 1}`,
+          type: 'chandelier',
+          x: cX + offset,
+          y: cY,
+          label: `Люстра ${i + 1}`,
+        });
+      }
     }
 
-    const spotsCount = Math.min(options.spotsGX53Count || 0, 8);
-    for (let i = 0; i < spotsCount; i++) {
-      const angle = (i / spotsCount) * Math.PI * 2;
-      newFixtures.push({
-        id: `fix-spot-${i}`,
-        type: 'spot',
-        x: centerX + Math.cos(angle) * (availW * 0.28),
-        y: centerY + Math.sin(angle) * (availH * 0.28),
-        label: `Спот ${i + 1}`,
-      });
+    // Spots (GX53)
+    const spotsCount = Math.min(options.spotsGX53Count || 0, 24);
+    if (spotsCount > 0) {
+      const radiusX = Math.min(availW * 0.3, 115);
+      const radiusY = Math.min(availH * 0.3, 85);
+      for (let i = 0; i < spotsCount; i++) {
+        const angle = (i / spotsCount) * Math.PI * 2;
+        newFixtures.push({
+          id: `fix-spot-${i}`,
+          type: 'spot',
+          x: Math.round(cX + Math.cos(angle) * radiusX),
+          y: Math.round(cY + Math.sin(angle) * radiusY),
+          label: `Спот ${i + 1}`,
+        });
+      }
     }
 
-    if (options.pipePassCount && options.pipePassCount > 0) {
+    // Pipe passes
+    const pipeCount = Math.min(options.pipePassCount || 0, 8);
+    for (let i = 0; i < pipeCount; i++) {
+      const cornerV = vertices[i % (vertices.length || 1)] || { x: padding + 25, y: padding + 25 };
+      const offsetX = 22 + (i > 0 ? (i * 12) : 0);
+      const offsetY = 22;
       newFixtures.push({
-        id: 'fix-pipe-1',
+        id: `fix-pipe-${i + 1}`,
         type: 'pipe',
-        x: centerX - availW * 0.35,
-        y: centerY - availH * 0.35,
-        label: 'Стояк',
+        x: cornerV.x + offsetX,
+        y: cornerV.y + offsetY,
+        label: pipeCount > 1 ? `Труба ${i + 1}` : 'Стояк',
       });
     }
 
-    setFixtures(newFixtures);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shape, customSides, customPoints]);
+    // Preserve positions of already dragged fixtures
+    setFixtures((prev) => {
+      const prevMap = new Map(prev.map((f) => [f.id, f]));
+      return newFixtures.map((nf) => {
+        const existing = prevMap.get(nf.id);
+        if (existing) {
+          return { ...nf, x: existing.x, y: existing.y };
+        }
+        return nf;
+      });
+    });
+  }, [
+    options.chandeliersCount,
+    options.spotsGX53Count,
+    options.pipePassCount,
+    canvasWidth,
+    canvasHeight,
+    padding,
+    vertices.length,
+  ]);
 
-  // Only re-initialize when shape changes or initial mount, NOT on every dragged dimension change!
+  // Synchronize vertices from dimension props when NOT dragging and NOT self-emitted
   useEffect(() => {
-    if (lastShapeRef.current !== shape) {
-      lastShapeRef.current = shape;
-      initVertices();
+    if (activeDragId) return;
+
+    // Check if this update came from our own pointer drag
+    const last = lastEmittedRef.current;
+    if (last.shape === shape) {
+      if (shape === 'rectangle' || shape === 'square') {
+        const isSq = shape === 'square';
+        const expectedW = isSq ? initialLength : initialWidth;
+        const matchesL = last.length !== undefined && Math.abs(last.length - initialLength) < 0.05;
+        const matchesW = last.width !== undefined && Math.abs(last.width - expectedW) < 0.05;
+        if (matchesL && matchesW && vertices.length === 4) {
+          return; // Skip sync, vertices are already in exact position!
+        }
+      } else if (shape === 'l_shaped') {
+        const matchesA = sideA === undefined || (last.sideA !== undefined && Math.abs(last.sideA - sideA) < 0.05);
+        const matchesB = sideB === undefined || (last.sideB !== undefined && Math.abs(last.sideB - sideB) < 0.05);
+        const matchesC = sideC === undefined || (last.sideC !== undefined && Math.abs(last.sideC - sideC) < 0.05);
+        const matchesD = sideD === undefined || (last.sideD !== undefined && Math.abs(last.sideD - sideD) < 0.05);
+        const matchesE = sideE === undefined || (last.sideE !== undefined && Math.abs(last.sideE - sideE) < 0.05);
+        const matchesF = sideF === undefined || (last.sideF !== undefined && Math.abs(last.sideF - sideF) < 0.05);
+        if (matchesA && matchesB && matchesC && matchesD && matchesE && matchesF && vertices.length === 6) {
+          return; // Skip sync, vertices are already in exact position!
+        }
+      } else if (shape === 'custom') {
+        if (last.length !== undefined && Math.abs(last.length - (initialLength || 0)) < 0.05 && vertices.length >= 3) {
+          return; // Skip sync on custom shape to prevent jump!
+        }
+      }
     }
-  }, [shape, initVertices]);
 
-  // Synchronize when customPoints changes from parent (e.g. manual side length input) or side count changes
-  useEffect(() => {
-    if (shape === 'custom' && !activeDragId) {
+    const availW = canvasWidth - padding * 2;
+    const availH = canvasHeight - padding * 2;
+    const centerX = canvasWidth / 2;
+    const centerY = canvasHeight / 2;
+
+    if (shape === 'rectangle' || shape === 'square') {
+      const l = Math.max(0.2, initialLength || 4.5);
+      const isSq = shape === 'square';
+      const w = isSq ? l : Math.max(0.2, initialWidth || 3.2);
+
+      const ppm = Math.min(availW / l, availH / w) * 0.85;
+      setPixelsPerMeter(ppm);
+
+      const boxW = l * ppm;
+      const boxH = w * ppm;
+      const startX = centerX - boxW / 2;
+      const startY = centerY - boxH / 2;
+
+      setVertices([
+        { id: 'v-0', label: 'A', x: Math.round(startX * 10) / 10, y: Math.round(startY * 10) / 10 },
+        { id: 'v-1', label: 'B', x: Math.round((startX + boxW) * 10) / 10, y: Math.round(startY * 10) / 10 },
+        { id: 'v-2', label: 'C', x: Math.round((startX + boxW) * 10) / 10, y: Math.round((startY + boxH) * 10) / 10 },
+        { id: 'v-3', label: 'D', x: Math.round(startX * 10) / 10, y: Math.round((startY + boxH) * 10) / 10 },
+      ]);
+    } else if (shape === 'l_shaped') {
+      const a = Math.max(0.2, sideA ?? initialLength ?? 5);
+      const b = Math.max(0.2, sideB ?? initialWidth ?? 4);
+      const c = Math.max(0.1, sideC ?? (a * 0.5));
+      const d = Math.max(0.1, sideD ?? (b * 0.45));
+      const e = Math.max(0.1, sideE ?? (a - c));
+      const f = Math.max(0.1, sideF ?? (b - d));
+
+      const ppmL = Math.min(availW / a, availH / b) * 0.85;
+      setPixelsPerMeter(ppmL);
+
+      const startX = centerX - (a * ppmL) / 2;
+      const startY = centerY - (b * ppmL) / 2;
+
+      setVertices([
+        { id: 'v-0', label: 'A', x: Math.round(startX * 10) / 10, y: Math.round(startY * 10) / 10 },
+        { id: 'v-1', label: 'B', x: Math.round((startX + a * ppmL) * 10) / 10, y: Math.round(startY * 10) / 10 },
+        { id: 'v-2', label: 'C', x: Math.round((startX + a * ppmL) * 10) / 10, y: Math.round((startY + d * ppmL) * 10) / 10 },
+        { id: 'v-3', label: 'D', x: Math.round((startX + (a - e) * ppmL) * 10) / 10, y: Math.round((startY + d * ppmL) * 10) / 10 },
+        { id: 'v-4', label: 'E', x: Math.round((startX + (a - e) * ppmL) * 10) / 10, y: Math.round((startY + b * ppmL) * 10) / 10 },
+        { id: 'v-5', label: 'F', x: Math.round(startX * 10) / 10, y: Math.round((startY + b * ppmL) * 10) / 10 },
+      ]);
+    } else if (shape === 'custom') {
       if (customPoints && customPoints.length >= 3) {
         const xs = customPoints.map((p) => p.x);
         const ys = customPoints.map((p) => p.y);
@@ -269,26 +400,36 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
         const midXM = (minX + maxX) / 2;
         const midYM = (minY + maxY) / 2;
 
-        const availW = canvasWidth - padding * 2;
-        const availH = canvasHeight - padding * 2;
         const ppmCustom = Math.min(availW / wM, availH / hM) * 0.82;
         setPixelsPerMeter(ppmCustom);
-
-        const cX = canvasWidth / 2;
-        const cY = canvasHeight / 2;
 
         const newVerts: TouchPoint[] = customPoints.map((p, i) => ({
           id: `v-${i}`,
           label: String.fromCharCode(65 + i),
-          x: Math.round((cX + (p.x - midXM) * ppmCustom) * 10) / 10,
-          y: Math.round((cY + (p.y - midYM) * ppmCustom) * 10) / 10,
+          x: Math.round((centerX + (p.x - midXM) * ppmCustom) * 10) / 10,
+          y: Math.round((centerY + (p.y - midYM) * ppmCustom) * 10) / 10,
         }));
         setVertices(newVerts);
-      } else if (customSides && customSides.length >= 3 && customSides.length !== vertices.length) {
+      } else if (customSides && customSides.length >= 3) {
         initVertices();
       }
     }
-  }, [shape, customPoints, customSides, activeDragId, initVertices, vertices.length]);
+  }, [
+    shape,
+    initialLength,
+    initialWidth,
+    sideA,
+    sideB,
+    sideC,
+    sideD,
+    sideE,
+    sideF,
+    customPoints,
+    customSides,
+    activeDragId,
+    initVertices,
+    vertices.length,
+  ]);
 
   // Zoom handlers
   const handleZoomIn = () => setZoomLevel((prev) => Math.min(2.5, Math.round((prev + 0.15) * 100) / 100));
@@ -371,6 +512,236 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
     }
 
     if (dragType === 'vertex') {
+      if (shape === 'rectangle' && vertices.length === 4) {
+        // Orthogonal rectangle resizing
+        const v0 = vertices[0];
+        const v1 = vertices[1];
+        const v2 = vertices[2];
+        const v3 = vertices[3];
+
+        let leftX = v0.x;
+        let rightX = v1.x;
+        let topY = v0.y;
+        let bottomY = v2.y;
+
+        const minSpan = 25; // minimum ~0.5m in pixels
+
+        if (activeDragId === 'v-0') { // Top-Left
+          leftX = Math.min(targetX, rightX - minSpan);
+          topY = Math.min(targetY, bottomY - minSpan);
+        } else if (activeDragId === 'v-1') { // Top-Right
+          rightX = Math.max(targetX, leftX + minSpan);
+          topY = Math.min(targetY, bottomY - minSpan);
+        } else if (activeDragId === 'v-2') { // Bottom-Right
+          rightX = Math.max(targetX, leftX + minSpan);
+          bottomY = Math.max(targetY, topY + minSpan);
+        } else if (activeDragId === 'v-3') { // Bottom-Left
+          leftX = Math.min(targetX, rightX - minSpan);
+          bottomY = Math.max(targetY, topY + minSpan);
+        }
+
+        const updatedVertices: TouchPoint[] = [
+          { id: 'v-0', label: 'A', x: leftX, y: topY },
+          { id: 'v-1', label: 'B', x: rightX, y: topY },
+          { id: 'v-2', label: 'C', x: rightX, y: bottomY },
+          { id: 'v-3', label: 'D', x: leftX, y: bottomY },
+        ];
+        setVertices(updatedVertices);
+
+        const newL = Math.max(0.2, Math.round(((rightX - leftX) / pixelsPerMeter) * 100) / 100);
+        const newW = Math.max(0.2, Math.round(((bottomY - topY) / pixelsPerMeter) * 100) / 100);
+        const area = Math.round(newL * newW * 100) / 100;
+        const perimeter = Math.round(2 * (newL + newW) * 100) / 100;
+        const diag = Math.round(Math.hypot(newL, newW) * 100) / 100;
+
+        lastEmittedRef.current = {
+          shape: 'rectangle',
+          length: newL,
+          width: newW,
+          sideA: newL,
+          sideB: newW,
+          sideC: newL,
+          sideD: newW,
+        };
+
+        onDimensionsChange({
+          length: newL,
+          width: newW,
+          sideA: newL,
+          sideB: newW,
+          sideC: newL,
+          sideD: newW,
+          diagonal1: diag,
+          diagonal2: diag,
+          area,
+          perimeter,
+          cornersCount: 4,
+        });
+        return;
+      }
+
+      if (shape === 'square' && vertices.length === 4) {
+        // Orthogonal square resizing (1:1 ratio)
+        const v0 = vertices[0];
+        const v1 = vertices[1];
+        const v2 = vertices[2];
+        const v3 = vertices[3];
+
+        let leftX = v0.x;
+        let rightX = v1.x;
+        let topY = v0.y;
+        let bottomY = v2.y;
+
+        const minSpan = 25;
+
+        if (activeDragId === 'v-0') {
+          const span = Math.max(minSpan, Math.max(v2.x - targetX, v2.y - targetY));
+          leftX = v2.x - span;
+          topY = v2.y - span;
+          rightX = v2.x;
+          bottomY = v2.y;
+        } else if (activeDragId === 'v-1') {
+          const span = Math.max(minSpan, Math.max(targetX - v3.x, v3.y - targetY));
+          leftX = v3.x;
+          rightX = v3.x + span;
+          topY = v3.y - span;
+          bottomY = v3.y;
+        } else if (activeDragId === 'v-2') {
+          const span = Math.max(minSpan, Math.max(targetX - v0.x, targetY - v0.y));
+          leftX = v0.x;
+          topY = v0.y;
+          rightX = v0.x + span;
+          bottomY = v0.y + span;
+        } else if (activeDragId === 'v-3') {
+          const span = Math.max(minSpan, Math.max(v1.x - targetX, targetY - v1.y));
+          rightX = v1.x;
+          topY = v1.y;
+          leftX = v1.x - span;
+          bottomY = v1.y + span;
+        }
+
+        const updatedVertices: TouchPoint[] = [
+          { id: 'v-0', label: 'A', x: leftX, y: topY },
+          { id: 'v-1', label: 'B', x: rightX, y: topY },
+          { id: 'v-2', label: 'C', x: rightX, y: bottomY },
+          { id: 'v-3', label: 'D', x: leftX, y: bottomY },
+        ];
+        setVertices(updatedVertices);
+
+        const side = Math.max(0.2, Math.round(((rightX - leftX) / pixelsPerMeter) * 100) / 100);
+        const area = Math.round(side * side * 100) / 100;
+        const perimeter = Math.round(4 * side * 100) / 100;
+        const diag = Math.round(side * Math.SQRT2 * 100) / 100;
+
+        lastEmittedRef.current = {
+          shape: 'square',
+          length: side,
+          width: side,
+          sideA: side,
+          sideB: side,
+          sideC: side,
+          sideD: side,
+        };
+
+        onDimensionsChange({
+          length: side,
+          width: side,
+          sideA: side,
+          sideB: side,
+          sideC: side,
+          sideD: side,
+          diagonal1: diag,
+          diagonal2: diag,
+          area,
+          perimeter,
+          cornersCount: 4,
+        });
+        return;
+      }
+
+      if (shape === 'l_shaped' && vertices.length === 6) {
+        // Orthogonal L-shape resizing
+        let x0 = vertices[0].x; // left wall
+        let x1 = vertices[1].x; // right outer wall
+        let x2 = vertices[3].x; // step inner wall
+        let y0 = vertices[0].y; // top wall
+        let y1 = vertices[2].y; // step horizontal level
+        let y2 = vertices[4].y; // bottom wall
+
+        const minSpan = 20;
+
+        if (activeDragId === 'v-0') {
+          x0 = Math.min(targetX, x2 - minSpan);
+          y0 = Math.min(targetY, y1 - minSpan);
+        } else if (activeDragId === 'v-1') {
+          x1 = Math.max(targetX, x2 + minSpan);
+          y0 = Math.min(targetY, y1 - minSpan);
+        } else if (activeDragId === 'v-2') {
+          x1 = Math.max(targetX, x2 + minSpan);
+          y1 = Math.max(y0 + minSpan, Math.min(targetY, y2 - minSpan));
+        } else if (activeDragId === 'v-3') {
+          x2 = Math.max(x0 + minSpan, Math.min(targetX, x1 - minSpan));
+          y1 = Math.max(y0 + minSpan, Math.min(targetY, y2 - minSpan));
+        } else if (activeDragId === 'v-4') {
+          x2 = Math.max(x0 + minSpan, Math.min(targetX, x1 - minSpan));
+          y2 = Math.max(targetY, y1 + minSpan);
+        } else if (activeDragId === 'v-5') {
+          x0 = Math.min(targetX, x2 - minSpan);
+          y2 = Math.max(targetY, y1 + minSpan);
+        }
+
+        const updatedVertices: TouchPoint[] = [
+          { id: 'v-0', label: 'A', x: x0, y: y0 },
+          { id: 'v-1', label: 'B', x: x1, y: y0 },
+          { id: 'v-2', label: 'C', x: x1, y: y1 },
+          { id: 'v-3', label: 'D', x: x2, y: y1 },
+          { id: 'v-4', label: 'E', x: x2, y: y2 },
+          { id: 'v-5', label: 'F', x: x0, y: y2 },
+        ];
+        setVertices(updatedVertices);
+
+        const a = Math.max(0.2, Math.round(((x1 - x0) / pixelsPerMeter) * 100) / 100);
+        const b = Math.max(0.2, Math.round(((y2 - y0) / pixelsPerMeter) * 100) / 100);
+        const d = Math.max(0.1, Math.round(((y1 - y0) / pixelsPerMeter) * 100) / 100);
+        const e = Math.max(0.1, Math.round(((x1 - x2) / pixelsPerMeter) * 100) / 100);
+        const c = Math.max(0.1, Math.round(((x2 - x0) / pixelsPerMeter) * 100) / 100);
+        const f = Math.max(0.1, Math.round(((y2 - y1) / pixelsPerMeter) * 100) / 100);
+
+        const rawArea = (a * b) - (e * f);
+        const area = Math.max(0.1, Math.round(rawArea * 100) / 100);
+        const perimeter = Math.round(2 * (a + b) * 100) / 100;
+        const d1 = Math.round(Math.hypot(x2 - x0, y1 - y0) / pixelsPerMeter * 100) / 100;
+
+        lastEmittedRef.current = {
+          shape: 'l_shaped',
+          length: a,
+          width: b,
+          sideA: a,
+          sideB: b,
+          sideC: c,
+          sideD: d,
+          sideE: e,
+          sideF: f,
+        };
+
+        onDimensionsChange({
+          length: a,
+          width: b,
+          sideA: a,
+          sideB: b,
+          sideC: c,
+          sideD: d,
+          sideE: e,
+          sideF: f,
+          diagonal1: d1,
+          area,
+          perimeter,
+          cornersCount: 6,
+        });
+        return;
+      }
+
+      // Default / custom shape: arbitrary vertex movement
       const updatedVertices = vertices.map((v) =>
         v.id === activeDragId ? { ...v, x: targetX, y: targetY } : v
       );
@@ -397,6 +768,12 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
         d1 = Math.round((d1Px / pixelsPerMeter) * 100) / 100;
         d2 = Math.round((d2Px / pixelsPerMeter) * 100) / 100;
       }
+
+      lastEmittedRef.current = {
+        shape: 'custom',
+        length: l,
+        width: w,
+      };
 
       onDimensionsChange({
         length: l,
@@ -730,6 +1107,74 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
             strokeLinejoin="round"
           />
 
+          {/* Curtain Niche (Ніша штор / карниза) if selected */}
+          {Boolean(options.curtainNicheMeters && options.curtainNicheMeters > 0 && vertices.length >= 2) && (() => {
+            const v0 = vertices[0];
+            const v1 = vertices[1];
+            const angle = Math.atan2(v1.y - v0.y, v1.x - v0.x);
+            const inNormX = -Math.sin(angle) * 16;
+            const inNormY = Math.cos(angle) * 16;
+
+            const x1 = v0.x + Math.cos(angle) * 10 + inNormX;
+            const y1 = v0.y + Math.sin(angle) * 10 + inNormY;
+            const x2 = v1.x - Math.cos(angle) * 10 + inNormX;
+            const y2 = v1.y - Math.sin(angle) * 10 + inNormY;
+            const midX = (x1 + x2) / 2;
+            const midY = (y1 + y2) / 2;
+
+            return (
+              <g key="touch-curtain-niche" className="pointer-events-none">
+                <line
+                  x1={x1}
+                  y1={y1}
+                  x2={x2}
+                  y2={y2}
+                  stroke="#c084fc"
+                  strokeWidth="3.5"
+                  strokeDasharray="6,3"
+                />
+                <line
+                  x1={x1 - inNormX * 0.4}
+                  y1={y1 - inNormY * 0.4}
+                  x2={x1 + inNormX * 0.4}
+                  y2={y1 + inNormY * 0.4}
+                  stroke="#c084fc"
+                  strokeWidth="2.5"
+                />
+                <line
+                  x1={x2 - inNormX * 0.4}
+                  y1={y2 - inNormY * 0.4}
+                  x2={x2 + inNormX * 0.4}
+                  y2={y2 + inNormY * 0.4}
+                  stroke="#c084fc"
+                  strokeWidth="2.5"
+                />
+                <rect
+                  x={midX - 48}
+                  y={midY - 8}
+                  width="96"
+                  height="16"
+                  rx="4"
+                  fill="#581c87"
+                  fillOpacity="0.92"
+                  stroke="#c084fc"
+                  strokeWidth="0.8"
+                />
+                <text
+                  x={midX}
+                  y={midY + 3.5}
+                  fill="#f3e8ff"
+                  fontSize="9.5"
+                  fontWeight="bold"
+                  textAnchor="middle"
+                  fontFamily="sans-serif"
+                >
+                  Ніша штор: {options.curtainNicheMeters}м
+                </text>
+              </g>
+            );
+          })()}
+
           {/* Live Side Length Labels */}
           {sideSegments.map((seg, idx) => (
             <g key={`side-${idx}`} className="pointer-events-none">
@@ -757,17 +1202,6 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
               </text>
             </g>
           ))}
-
-          {/* Center Info Badge (Area & Perimeter) */}
-          <g transform={`translate(${centerX - 50}, ${centerY - 22})`} className="pointer-events-none">
-            <rect width="100" height="42" rx="8" fill="#020617" fillOpacity="0.92" stroke="#0284c7" strokeWidth="1.2" />
-            <text x="50" y="16" fill="#f8fafc" fontSize="13" fontWeight="bold" textAnchor="middle" fontFamily="monospace">
-              {currentMetrics.area} м²
-            </text>
-            <text x="50" y="32" fill="#94a3b8" fontSize="10" textAnchor="middle" fontFamily="monospace">
-              P = {currentMetrics.perimeter} м
-            </text>
-          </g>
 
           {/* Draggable Fixtures (Chandeliers, Spots, Pipes) */}
           {fixtures.map((fix) => {
