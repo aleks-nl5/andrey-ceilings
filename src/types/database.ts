@@ -46,8 +46,19 @@ export interface RoomOptions {
   spotsGX53Count: number;         // Точечные светильники, шт
   pipePassCount: number;          // Обводы труб отопления, шт
   curtainNicheMeters: number;     // Скрытый карниз / ниша ПК-5, м
+  curtainNicheSide?: string;      // Сторона прив'язки ніші штор ('A', 'B', 'C', 'D'...)
   extraCorners: number;           // Дополнительные углы (> 4)
   hardWallMeters: number;         // Монтаж по плитке / керамограниту, м
+}
+
+export interface PlacedFixture {
+  id: string;
+  type: 'chandelier' | 'spot' | 'pipe';
+  relX: number; // 0..1 відносно габаритного прямокутника кімнати
+  relY: number; // 0..1 відносно габаритного прямокутника кімнати
+  x?: number;   // кешована координата X на канвасі
+  y?: number;   // кешована координата Y на канвасі
+  label?: string;
 }
 
 export interface CostBreakdown {
@@ -94,6 +105,7 @@ export interface RoomMeasurement {
   profileType: ProfileType | string;       // стандартний або власний профіль
   
   options: RoomOptions;
+  fixtures?: PlacedFixture[];     // Збережені місця розташування люстр, світильників, труб
   customOptions?: { id: string; name: string; unit: string; price: number; quantity: number }[];
   comments: string;               // Текстовые комментарии и примечания по замеру
   photos: MeasurementPhoto[];     // Фотографии объекта

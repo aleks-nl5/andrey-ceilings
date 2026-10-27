@@ -91,7 +91,7 @@ export const NewMeasurementModal: React.FC<NewMeasurementModalProps> = ({
 
   const handleConfirmExisting = () => {
     if (!selectedObjId) {
-      setErrorMsg('Будь ласка, оберіть об’єкт зі списку');
+      setErrorMsg(t.selectObjectError);
       return;
     }
     onSelectObject(selectedObjId);
@@ -101,7 +101,7 @@ export const NewMeasurementModal: React.FC<NewMeasurementModalProps> = ({
   const handleCreateNew = (e: React.FormEvent) => {
     e.preventDefault();
     if (!objectAddress.trim()) {
-      setErrorMsg('Будь ласка, вкажіть адресу об’єкта');
+      setErrorMsg(t.specifyAddressError);
       return;
     }
 
@@ -117,7 +117,7 @@ export const NewMeasurementModal: React.FC<NewMeasurementModalProps> = ({
     }
 
     if (!finalClientName) {
-      setErrorMsg('Будь ласка, вкажіть або оберіть клієнта');
+      setErrorMsg(t.specifyClientError);
       return;
     }
 
@@ -152,7 +152,7 @@ export const NewMeasurementModal: React.FC<NewMeasurementModalProps> = ({
                 {t.newMeasurement}
               </h2>
               <p className="text-xs text-slate-600 dark:text-slate-400">
-                Виберіть об'єкт з випадаючого списку або створіть новий
+                {t.selectObjectFromListDesc}
               </p>
             </div>
           </div>
@@ -181,7 +181,7 @@ export const NewMeasurementModal: React.FC<NewMeasurementModalProps> = ({
             }`}
           >
             <ListFilter className="w-3.5 h-3.5" />
-            <span>Обрати об’єкт ({objects.length})</span>
+            <span>{t.chooseObject} ({objects.length})</span>
           </button>
 
           <button
@@ -197,7 +197,7 @@ export const NewMeasurementModal: React.FC<NewMeasurementModalProps> = ({
             }`}
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>+ Створити новий об’єкт</span>
+            <span>{t.createNewObject}</span>
           </button>
         </div>
 

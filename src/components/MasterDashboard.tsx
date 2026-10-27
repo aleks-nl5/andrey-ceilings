@@ -121,14 +121,14 @@ export const MasterDashboard: React.FC<MasterDashboardProps> = ({
                   <Clock className="w-3.5 h-3.5" />
                   <span>
                     {primaryEvent.diffDays === 0 
-                      ? 'Сьогодні за розкладом' 
+                      ? t.todayScheduled 
                       : primaryEvent.diffDays === 1 
-                        ? 'Завтра' 
-                        : `Через ${primaryEvent.diffDays} дн. (${primaryEvent.dateStr})`}
+                        ? t.tomorrow 
+                        : `${t.inDays} ${primaryEvent.diffDays} (${primaryEvent.dateStr})`}
                   </span>
                 </span>
                 <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">
-                  {primaryEvent.type.includes('measure') ? 'Замір приміщення' : 'Монтаж натяжної стелі'}
+                  {primaryEvent.type.includes('measure') ? t.measureSurvey : t.installCeiling}
                 </span>
               </div>
 
@@ -139,7 +139,7 @@ export const MasterDashboard: React.FC<MasterDashboardProps> = ({
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-700 dark:text-slate-300">
                 {primaryEvent.client && (
                   <span className="font-medium text-slate-900 dark:text-slate-100">
-                    Замовник: <strong>{primaryEvent.client.name}</strong>
+                    {t.clientLabel} <strong>{primaryEvent.client.name}</strong>
                   </span>
                 )}
                 {primaryEvent.object.roomType && (
@@ -158,7 +158,7 @@ export const MasterDashboard: React.FC<MasterDashboardProps> = ({
                   className="px-3.5 py-2 rounded-xl bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-xs font-bold flex items-center gap-1.5 transition shadow-xs"
                 >
                   <Phone className="w-3.5 h-3.5 text-emerald-600" />
-                  <span className="hidden xs:inline">Подзвонити</span>
+                  <span className="hidden xs:inline">{t.call}</span>
                 </a>
               )}
               <button
@@ -169,7 +169,7 @@ export const MasterDashboard: React.FC<MasterDashboardProps> = ({
                 }}
                 className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 active:scale-95 text-white text-xs font-bold flex items-center gap-1.5 transition shadow-md shadow-cyan-900/30"
               >
-                <span>Перейти до об'єкту</span>
+                <span>{t.goToObject}</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -184,10 +184,10 @@ export const MasterDashboard: React.FC<MasterDashboardProps> = ({
             </div>
             <div>
               <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                На сьогодні термінових виїздів немає
+                {t.noUrgentVisits}
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Створіть новий замір або перевірте список поточних замовлень
+                {t.noUrgentVisitsDesc}
               </p>
             </div>
           </div>
@@ -197,7 +197,7 @@ export const MasterDashboard: React.FC<MasterDashboardProps> = ({
             className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs transition"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>+ Замір</span>
+            <span>+ {t.newMeasurement}</span>
           </button>
         </div>
       )}
@@ -205,7 +205,7 @@ export const MasterDashboard: React.FC<MasterDashboardProps> = ({
       {/* 2. MASTER'S FOUR QUICK-ACTION TILES (2 per row on mobile) */}
       <div>
         <h3 className="text-xs uppercase font-extrabold tracking-wider text-slate-500 dark:text-slate-400 mb-2.5 px-1">
-          Швидкі інструменти майстра
+          {t.quickToolsTitle}
         </h3>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
@@ -220,12 +220,12 @@ export const MasterDashboard: React.FC<MasterDashboardProps> = ({
                 <Ruler className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.2]" />
               </div>
               <span className="text-[10px] sm:text-[11px] font-bold px-1.5 py-0.5 rounded bg-cyan-50 dark:bg-cyan-950 text-cyan-700 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-800">
-                + новий
+                + {t.newMeasurement.toLowerCase()}
               </span>
             </div>
             <div>
               <h4 className="text-xs sm:text-base font-extrabold text-slate-900 dark:text-white group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors leading-tight">
-                Швидкий замір
+                {t.quickMeasurement}
               </h4>
             </div>
           </button>
@@ -243,7 +243,7 @@ export const MasterDashboard: React.FC<MasterDashboardProps> = ({
             </div>
             <div>
               <h4 className="text-xs sm:text-base font-extrabold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-tight">
-                Калькулятор
+                {t.tabCalculator}
               </h4>
             </div>
           </button>
@@ -259,12 +259,12 @@ export const MasterDashboard: React.FC<MasterDashboardProps> = ({
                 <Building2 className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.2]" />
               </div>
               <span className="text-[10px] sm:text-[11px] font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                {activeObjectsCount} акт.
+                {activeObjectsCount}
               </span>
             </div>
             <div>
               <h4 className="text-xs sm:text-base font-extrabold text-slate-900 dark:text-white group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors leading-tight">
-                Об'єкти та клієнти
+                {t.objectsAndClients}
               </h4>
             </div>
           </button>
@@ -282,7 +282,7 @@ export const MasterDashboard: React.FC<MasterDashboardProps> = ({
             </div>
             <div>
               <h4 className="text-xs sm:text-base font-extrabold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors leading-tight">
-                Налаштування
+                {t.tabSettings}
               </h4>
             </div>
           </button>
@@ -296,7 +296,7 @@ export const MasterDashboard: React.FC<MasterDashboardProps> = ({
             <Building2 className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
           <div className="min-w-0 w-full">
-            <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 block truncate leading-tight">Об'єктів</span>
+            <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 block truncate leading-tight">{t.objectsCount}</span>
             <p className="text-sm sm:text-lg font-bold text-slate-900 dark:text-white font-mono leading-none mt-0.5 truncate">{activeObjectsCount}</p>
           </div>
         </div>
@@ -306,7 +306,7 @@ export const MasterDashboard: React.FC<MasterDashboardProps> = ({
             <Layers className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
           <div className="min-w-0 w-full">
-            <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 block truncate leading-tight">Кімнат</span>
+            <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 block truncate leading-tight">{t.roomsCount}</span>
             <p className="text-sm sm:text-lg font-bold text-slate-900 dark:text-white font-mono leading-none mt-0.5 truncate">{totalRooms}</p>
           </div>
         </div>
@@ -316,8 +316,8 @@ export const MasterDashboard: React.FC<MasterDashboardProps> = ({
             <Ruler className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
           <div className="min-w-0 w-full">
-            <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 block truncate leading-tight">Площа</span>
-            <p className="text-sm sm:text-lg font-bold text-slate-900 dark:text-white font-mono leading-none mt-0.5 truncate">{totalArea} м²</p>
+            <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 block truncate leading-tight">{t.areaMetric}</span>
+            <p className="text-sm sm:text-lg font-bold text-slate-900 dark:text-white font-mono leading-none mt-0.5 truncate">{totalArea} {t.unitM2}</p>
           </div>
         </div>
       </div>

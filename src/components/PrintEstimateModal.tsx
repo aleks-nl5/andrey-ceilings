@@ -4,7 +4,9 @@ import {
   Printer, 
   X, 
   Download, 
-  FileText
+  FileText,
+  Camera,
+  Image as ImageIcon
 } from 'lucide-react';
 import { RoomMeasurement, ObjectProject, Client, MasterProfile, MasterPriceList } from '../types/database';
 import { RoomBlueprint } from './RoomBlueprint';
@@ -137,11 +139,17 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
     }
   }, [isOpen, printScope, selectedSingleId, profile?.masterName, profile?.companyName, docCurrencySymbol]);
 
+  const [includePhotos, setIncludePhotos] = useState<boolean>(true);
+
   if (!isOpen) return null;
 
   const targetRooms = printScope === 'single'
     ? allRooms.filter((r) => r.id === selectedSingleId)
     : allRooms;
+
+  // Calculate attached photos availability
+  const totalPhotosCount = targetRooms.reduce((acc, r) => acc + (r.photos?.length || 0), 0);
+  const hasAnyPhotos = totalPhotosCount > 0;
 
   // Calculate totals across target rooms
   const totalArea = Math.round(targetRooms.reduce((acc, r) => acc + (r.area || 0), 0) * 100) / 100;
@@ -248,7 +256,7 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-bold text-slate-900 dark:text-white leading-tight">
-                  Друк кошторису (PDF)
+                  {t.printEstimateTitle}
                 </h2>
                 <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-cyan-100 text-cyan-800 dark:bg-cyan-950 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800">
                   № {documentNumber}
@@ -272,7 +280,7 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                 }`}
               >
-                Всі кімнати ({allRooms.length})
+                {t.allRoomsScope} ({allRooms.length})
               </button>
               <button
                 type="button"
@@ -283,26 +291,44 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                 }`}
               >
-                Окреме приміщення
+                {t.singleRoomScope}
               </button>
             </div>
           )}
 
-          {/* Actions */}
-          <div className="flex items-center gap-2">
+          {/* Actions & Optional Photo Toggle */}
+          <div className="flex flex-wrap items-center gap-2">
+            {hasAnyPhotos && (
+              <label className="flex items-center gap-2 cursor-pointer select-none px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 transition text-xs font-semibold text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 shadow-xs">
+                <input
+                  type="checkbox"
+                  checked={includePhotos}
+                  onChange={(e) => setIncludePhotos(e.target.checked)}
+                  className="w-4 h-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500 cursor-pointer accent-cyan-600"
+                />
+                <span className="flex items-center gap-1.5">
+                  <Camera className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
+                  <span>{t.printPhotos}</span>
+                  <span className="px-1.5 py-0.2 rounded-full bg-cyan-100 dark:bg-cyan-950 text-cyan-700 dark:text-cyan-300 text-[10px] font-bold">
+                    {totalPhotosCount}
+                  </span>
+                </span>
+              </label>
+            )}
+
             <button
               type="button"
               onClick={handlePrint}
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 active:scale-95 text-white font-bold text-xs shadow-md shadow-cyan-900/30 transition cursor-pointer"
             >
               <Printer className="w-4 h-4" />
-              <span>Роздрукувати / PDF</span>
+              <span>{t.printPdf}</span>
             </button>
             <button
               type="button"
               onClick={handleDownloadHtml}
               className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 font-semibold text-xs border border-slate-200 dark:border-slate-700 transition"
-              title="Завантажити копію HTML"
+              title="HTML"
             >
               <Download className="w-3.5 h-3.5" />
               <span>HTML</span>
@@ -320,7 +346,7 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
         {/* Room selector dropdown if single mode */}
         {printScope === 'single' && allRooms.length > 1 && (
           <div className="no-print px-6 py-2 bg-slate-100/70 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3 text-xs">
-            <span className="font-semibold text-slate-600 dark:text-slate-400">Оберіть кімнату:</span>
+            <span className="font-semibold text-slate-600 dark:text-slate-400">{t.selectRoom}:</span>
             <select
               value={selectedSingleId}
               onChange={(e) => setSelectedSingleId(e.target.value)}
@@ -545,12 +571,15 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
                           area={room.area}
                           perimeter={room.perimeter}
                           options={room.options}
+                          fixtures={room.fixtures}
                           canvasColorName={room.canvasColor}
                           isPrint={true}
+                          locale={locale}
+                          t={t}
                         />
                       </div>
                       <span className="text-[10px] text-gray-500 font-mono mt-1">
-                        Схема розкрою та діагоналей стелі
+                        {t.blueprintSchemeTitle}
                       </span>
                     </div>
 
@@ -560,11 +589,11 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
                         <thead>
                           <tr className="bg-gray-100 border-y border-black text-black">
                             <th className="py-1.5 px-2 font-bold w-8 text-center">№</th>
-                            <th className="py-1.5 px-2 font-bold">Найменування робіт та матеріалів</th>
-                            <th className="py-1.5 px-2 font-bold text-center w-16">Кількість</th>
-                            <th className="py-1.5 px-2 font-bold text-center w-14">Од. вим.</th>
-                            <th className="py-1.5 px-2 font-bold text-right w-20">Ціна, {roomCurrency}</th>
-                            <th className="py-1.5 px-2 font-bold text-right w-24">Сума, {roomCurrency}</th>
+                            <th className="py-1.5 px-2 font-bold">{t.estimateWorkAndMaterials}</th>
+                            <th className="py-1.5 px-2 font-bold text-center w-16">{t.quantity}</th>
+                            <th className="py-1.5 px-2 font-bold text-center w-14">{t.unit}</th>
+                            <th className="py-1.5 px-2 font-bold text-right w-20">{t.price}, {roomCurrency}</th>
+                            <th className="py-1.5 px-2 font-bold text-right w-24">{t.amount}, {roomCurrency}</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200 text-black">
@@ -572,10 +601,10 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
                           <tr>
                             <td className="py-1 px-2 text-center text-gray-500">{rowNum++}</td>
                             <td className="py-1 px-2">
-                              Полотно натяжної стелі ({getMaterialLabel(room.materialType, locale, roomPrices)}{room.canvasColor ? `, ${room.canvasColor}` : ''})
+                              {t.canvasItemLabel} ({getMaterialLabel(room.materialType, locale, roomPrices)}{room.canvasColor ? `, ${room.canvasColor}` : ''})
                             </td>
                             <td className="py-1 px-2 text-center font-mono">{room.area}</td>
-                            <td className="py-1 px-2 text-center">м²</td>
+                            <td className="py-1 px-2 text-center">{t.unitM2}</td>
                             <td className="py-1 px-2 text-right font-mono">{canvasRate}</td>
                             <td className="py-1 px-2 text-right font-mono font-semibold">{canvasTotal}</td>
                           </tr>
@@ -584,10 +613,10 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
                           <tr>
                             <td className="py-1 px-2 text-center text-gray-500">{rowNum++}</td>
                             <td className="py-1 px-2">
-                              Профіль кріплення та монтаж ({getProfileLabel(room.profileType, locale, roomPrices)})
+                              {t.profileItemLabel} ({getProfileLabel(room.profileType, locale, roomPrices)})
                             </td>
                             <td className="py-1 px-2 text-center font-mono">{room.perimeter}</td>
-                            <td className="py-1 px-2 text-center">м.п.</td>
+                            <td className="py-1 px-2 text-center">{t.unitM}</td>
                             <td className="py-1 px-2 text-right font-mono">{profileRate}</td>
                             <td className="py-1 px-2 text-right font-mono font-semibold">{profileTotal}</td>
                           </tr>
@@ -596,9 +625,9 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
                           {extraCorners > 0 && (
                             <tr>
                               <td className="py-1 px-2 text-center text-gray-500">{rowNum++}</td>
-                              <td className="py-1 px-2">Обробка додаткових кутів (понад 4 шт)</td>
+                              <td className="py-1 px-2">{t.extraCornersItemLabel}</td>
                               <td className="py-1 px-2 text-center font-mono">{extraCorners}</td>
-                              <td className="py-1 px-2 text-center">шт</td>
+                              <td className="py-1 px-2 text-center">{t.unitPcs}</td>
                               <td className="py-1 px-2 text-right font-mono">{roomPrices.extraCornerCost}</td>
                               <td className="py-1 px-2 text-right font-mono font-semibold">{extraCornersCost}</td>
                             </tr>
@@ -608,9 +637,9 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
                           {Boolean(opt.chandeliersCount && opt.chandeliersCount > 0) && (
                             <tr>
                               <td className="py-1 px-2 text-center text-gray-500">{rowNum++}</td>
-                              <td className="py-1 px-2">Монтаж люстри (закладна + гак/планка)</td>
+                              <td className="py-1 px-2">{t.chandelierItemLabel}</td>
                               <td className="py-1 px-2 text-center font-mono">{opt.chandeliersCount}</td>
-                              <td className="py-1 px-2 text-center">шт</td>
+                              <td className="py-1 px-2 text-center">{t.unitPcs}</td>
                               <td className="py-1 px-2 text-right font-mono">{roomPrices.chandelierInstallation}</td>
                               <td className="py-1 px-2 text-right font-mono font-semibold">{chandelierCost}</td>
                             </tr>
@@ -620,9 +649,9 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
                           {Boolean(opt.spotsGX53Count && opt.spotsGX53Count > 0) && (
                             <tr>
                               <td className="py-1 px-2 text-center text-gray-500">{rowNum++}</td>
-                              <td className="py-1 px-2">Монтаж точкового світильника (стійка, розводка)</td>
+                              <td className="py-1 px-2">{t.spotItemLabel}</td>
                               <td className="py-1 px-2 text-center font-mono">{opt.spotsGX53Count}</td>
-                              <td className="py-1 px-2 text-center">шт</td>
+                              <td className="py-1 px-2 text-center">{t.unitPcs}</td>
                               <td className="py-1 px-2 text-right font-mono">{roomPrices.spotInstallation}</td>
                               <td className="py-1 px-2 text-right font-mono font-semibold">{spotsCost}</td>
                             </tr>
@@ -632,9 +661,9 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
                           {Boolean(opt.lightLinesMeters && opt.lightLinesMeters > 0) && (
                             <tr>
                               <td className="py-1 px-2 text-center text-gray-500">{rowNum++}</td>
-                              <td className="py-1 px-2">Світлова лінія зі світлодіодною стрічкою</td>
+                              <td className="py-1 px-2">{t.lightLineItemLabel}</td>
                               <td className="py-1 px-2 text-center font-mono">{opt.lightLinesMeters}</td>
-                              <td className="py-1 px-2 text-center">м.п.</td>
+                              <td className="py-1 px-2 text-center">{t.unitM}</td>
                               <td className="py-1 px-2 text-right font-mono">{roomPrices.lightLinePerMeter}</td>
                               <td className="py-1 px-2 text-right font-mono font-semibold">{lightLinesCost}</td>
                             </tr>
@@ -644,9 +673,9 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
                           {Boolean(opt.pipePassCount && opt.pipePassCount > 0) && (
                             <tr>
                               <td className="py-1 px-2 text-center text-gray-500">{rowNum++}</td>
-                              <td className="py-1 px-2">Обвід труби опалення (термокільце)</td>
+                              <td className="py-1 px-2">{t.pipePassItemLabel}</td>
                               <td className="py-1 px-2 text-center font-mono">{opt.pipePassCount}</td>
-                              <td className="py-1 px-2 text-center">шт</td>
+                              <td className="py-1 px-2 text-center">{t.unitPcs}</td>
                               <td className="py-1 px-2 text-right font-mono">{roomPrices.pipePass}</td>
                               <td className="py-1 px-2 text-right font-mono font-semibold">{pipesCost}</td>
                             </tr>
@@ -656,9 +685,9 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
                           {Boolean(opt.curtainNicheMeters && opt.curtainNicheMeters > 0) && (
                             <tr>
                               <td className="py-1 px-2 text-center text-gray-500">{rowNum++}</td>
-                              <td className="py-1 px-2">Ніша під карниз для штор</td>
+                              <td className="py-1 px-2">{t.curtainNicheItemLabel}</td>
                               <td className="py-1 px-2 text-center font-mono">{opt.curtainNicheMeters}</td>
-                              <td className="py-1 px-2 text-center">м.п.</td>
+                              <td className="py-1 px-2 text-center">{t.unitM}</td>
                               <td className="py-1 px-2 text-right font-mono">{roomPrices.curtainNichePerMeter}</td>
                               <td className="py-1 px-2 text-right font-mono font-semibold">{curtainNicheCost}</td>
                             </tr>
@@ -668,9 +697,9 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
                           {Boolean(opt.hardWallMeters && opt.hardWallMeters > 0) && (
                             <tr>
                               <td className="py-1 px-2 text-center text-gray-500">{rowNum++}</td>
-                              <td className="py-1 px-2">Свердління керамограніту/плитки</td>
+                              <td className="py-1 px-2">{t.hardWallItemLabel}</td>
                               <td className="py-1 px-2 text-center font-mono">{opt.hardWallMeters}</td>
-                              <td className="py-1 px-2 text-center">м.п.</td>
+                              <td className="py-1 px-2 text-center">{t.unitM}</td>
                               <td className="py-1 px-2 text-right font-mono">{roomPrices.hardWallPerMeter}</td>
                               <td className="py-1 px-2 text-right font-mono font-semibold">{hardWallCost}</td>
                             </tr>
@@ -682,7 +711,7 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
                               <td className="py-1 px-2 text-center text-gray-500">{rowNum++}</td>
                               <td className="py-1 px-2">{co.name}</td>
                               <td className="py-1 px-2 text-center font-mono">{co.quantity}</td>
-                              <td className="py-1 px-2 text-center">{co.unit || 'шт'}</td>
+                              <td className="py-1 px-2 text-center">{co.unit || t.unitPcs}</td>
                               <td className="py-1 px-2 text-right font-mono">{co.price}</td>
                               <td className="py-1 px-2 text-right font-mono font-semibold">{Math.round(co.quantity * co.price)}</td>
                             </tr>
@@ -691,7 +720,7 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
                           {/* Subtotal row */}
                           <tr className="bg-gray-50 font-bold border-t-2 border-black">
                             <td colSpan={5} className="py-2 px-2 text-right text-black">
-                              Разом по приміщенню «{room.name || 'Приміщення'}»:
+                              {t.roomSubtotal} «{room.name || 'Приміщення'}»:
                             </td>
                             <td className="py-2 px-2 text-right font-mono text-sm text-black">
                               {cost.totalCost || 0} {roomCurrency}
@@ -700,6 +729,58 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
                         </tbody>
                       </table>
                     </div>
+
+                    {/* Attached Room Photo Gallery (If enabled and room has photos) */}
+                    {includePhotos && room.photos && room.photos.length > 0 && (
+                      <div className="mt-4 pt-3 border-t border-gray-300 break-inside-avoid page-break-avoid">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-bold text-xs text-black uppercase tracking-wider flex items-center gap-1.5">
+                            <span>📷 {t.photosSectionTitle}</span>
+                            <span className="text-[10px] text-gray-500 font-normal">
+                              ({room.photos.length} {t.photosCountUnit})
+                            </span>
+                          </h4>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 print:grid-cols-2">
+                          {room.photos.map((photo, pIdx) => (
+                            <div
+                              key={photo.id || pIdx}
+                              className="border border-gray-300 rounded p-1.5 bg-gray-50 flex flex-col break-inside-avoid page-break-avoid"
+                            >
+                              <div className="relative w-full h-36 bg-gray-200 rounded overflow-hidden flex items-center justify-center">
+                                <img
+                                  src={photo.dataUrl}
+                                  alt={photo.caption || `Фото ${pIdx + 1}`}
+                                  className="w-full h-full object-cover"
+                                  loading="eager"
+                                />
+                              </div>
+                              {(photo.caption || photo.timestamp) && (
+                                <div className="mt-1 px-0.5 flex flex-col text-[9px] text-gray-700">
+                                  {photo.caption && (
+                                    <span className="font-semibold text-black truncate">{photo.caption}</span>
+                                  )}
+                                  {photo.timestamp && (
+                                    <span className="text-gray-500 font-mono">
+                                      {new Date(photo.timestamp).toLocaleDateString(
+                                        locale === 'en' ? 'en-US' : locale === 'ru' ? 'ru-RU' : 'uk-UA',
+                                        {
+                                          day: '2-digit',
+                                          month: '2-digit',
+                                          year: 'numeric',
+                                          hour: '2-digit',
+                                          minute: '2-digit',
+                                        }
+                                      )}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -708,39 +789,39 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
             {/* 4. GRAND TOTAL SUMMARY TABLE (Pure B&W) */}
             <div className="mt-6 border-2 border-black rounded p-4 bg-white break-inside-avoid page-break-avoid">
               <h3 className="font-extrabold text-sm text-black uppercase tracking-wider mb-3 pb-2 border-b border-black flex justify-between items-center">
-                <span>Підсумок замовлення {targetRooms.length > 1 ? `(всіх кімнат: ${targetRooms.length})` : ''}</span>
+                <span>{t.orderGrandTotal} {targetRooms.length > 1 ? `(${t.allRoomsScope.toLowerCase()}: ${targetRooms.length})` : ''}</span>
                 <span className="font-mono text-xs font-normal lowercase text-gray-600">
-                  S загальна = {totalArea} м² | P загальний = {totalPerimeter} м.п.
+                  {t.totalAreaAndPerimeter} = {totalArea} {t.unitM2} | P = {totalPerimeter} {t.unitM}
                 </span>
               </h3>
 
               <div className="space-y-1.5 text-xs text-black">
                 <div className="flex justify-between py-1 border-b border-gray-200">
-                  <span className="text-gray-700">Сума за матеріали та монтажні роботи:</span>
+                  <span className="text-gray-700">{t.materialsAndLaborSum}</span>
                   <span className="font-mono font-bold text-black">{totalBaseCost} {docCurrencySymbol}</span>
                 </div>
 
                 {discountPercent > 0 && (
                   <div className="flex justify-between py-1 border-b border-gray-200 text-black">
-                    <span>Знижка ({discountPercent}%):</span>
+                    <span>{t.discount} ({discountPercent}%):</span>
                     <span className="font-mono font-bold">- {discountAmount} {docCurrencySymbol}</span>
                   </div>
                 )}
 
                 <div className="flex justify-between py-1 border-b border-gray-200">
-                  <span className="text-gray-700">Загальна вартість договору:</span>
+                  <span className="text-gray-700">{t.contractTotal}</span>
                   <span className="font-mono font-bold text-black">{finalTotal} {docCurrencySymbol}</span>
                 </div>
 
                 {prepayment > 0 && (
                   <div className="flex justify-between py-1 border-b border-gray-200 text-black">
-                    <span>Внесена попередня оплата (аванс):</span>
+                    <span>{t.prepaymentPaid}</span>
                     <span className="font-mono font-bold">{prepayment} {docCurrencySymbol}</span>
                   </div>
                 )}
 
                 <div className="flex justify-between items-center pt-2 text-sm font-extrabold text-black">
-                  <span className="uppercase tracking-wide">До сплати після встановлення:</span>
+                  <span className="uppercase tracking-wide">{t.balanceDue}</span>
                   <span className="font-mono text-base font-extrabold text-black underline underline-offset-4">
                     {balanceDue} {docCurrencySymbol}
                   </span>
@@ -751,7 +832,7 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
               {profile?.bankDetails?.trim() && (
                 <div className="mt-4 p-2.5 rounded bg-white border border-gray-300 text-xs text-black">
                   <strong className="block text-black text-[11px] uppercase tracking-wider mb-0.5">
-                    Реквізити для оплати / внесення авансу:
+                    {t.paymentDetails}
                   </strong>
                   <p className="font-mono text-[11px] whitespace-pre-wrap">{profile.bankDetails}</p>
                 </div>
@@ -760,7 +841,7 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
               {/* Warranty & Custom Terms (Only if filled by master) */}
               {profile?.warrantyNotes?.trim() && (
                 <div className="mt-2 text-[11px] text-gray-700 italic">
-                  <strong>Гарантія: </strong>
+                  <strong>{t.warranty} </strong>
                   {profile.warrantyNotes}
                 </div>
               )}
@@ -769,7 +850,7 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
             {/* 5. SIGNATURE FOOTER */}
             <div className="mt-8 pt-4 border-t border-black grid grid-cols-2 gap-8 text-xs break-inside-avoid page-break-avoid text-black">
               <div>
-                <p className="font-bold text-black mb-6">Замовник:</p>
+                <p className="font-bold text-black mb-6">{t.customerSignature}:</p>
                 <div className="border-b border-black w-full mb-1" />
                 <p className="text-[10px] text-gray-600">
                   {client?.name ? `(підпис) / ${client.name}` : '(підпис замовника)'}
@@ -777,7 +858,7 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
               </div>
 
               <div>
-                <p className="font-bold text-black mb-6">Виконавець:</p>
+                <p className="font-bold text-black mb-6">{t.contractorSignature}:</p>
                 <div className="border-b border-black w-full mb-1" />
                 <p className="text-[10px] text-gray-600">
                   {profile?.masterName?.trim() 

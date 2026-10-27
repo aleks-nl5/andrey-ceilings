@@ -12,8 +12,9 @@ import {
   ZoomIn,
   ZoomOut
 } from 'lucide-react';
-import { RoomShape, RoomOptions } from '../types/database';
+import { RoomShape, RoomOptions, PlacedFixture } from '../types/database';
 import { Point2D, createDefaultCustomPoints } from '../utils/calculator';
+import { Locale, Translations, TRANSLATIONS } from '../i18n/translations';
 
 export interface TouchPoint {
   id: string;
@@ -27,6 +28,8 @@ export interface FixturePoint {
   type: 'chandelier' | 'spot' | 'pipe';
   x: number;
   y: number;
+  relX: number; // 0..1 relative to room bounding box
+  relY: number; // 0..1 relative to room bounding box
   label?: string;
 }
 
@@ -46,6 +49,9 @@ interface TouchBlueprintEditorProps {
   diagonal1?: number;
   diagonal2?: number;
   options: Partial<RoomOptions>;
+  initialFixtures?: PlacedFixture[];
+  onFixturesChange?: (fixtures: PlacedFixture[]) => void;
+  onOptionsChange?: (options: Partial<RoomOptions>) => void;
   onDimensionsChange: (params: {
     length: number;
     width: number;
@@ -64,6 +70,8 @@ interface TouchBlueprintEditorProps {
     cornersCount?: number;
   }) => void;
   className?: string;
+  locale?: Locale;
+  t?: Translations;
 }
 
 export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
@@ -82,9 +90,15 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
   diagonal1,
   diagonal2,
   options,
+  initialFixtures,
+  onFixturesChange,
+  onOptionsChange,
   onDimensionsChange,
   className = '',
+  locale = 'uk',
+  t: propT,
 }) => {
+  const t = propT || TRANSLATIONS[locale] || TRANSLATIONS.uk;
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -122,6 +136,7 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
     sideE?: number;
     sideF?: number;
   }>({});
+  const lastEmittedFixturesRef = useRef<string>('');
 
   // Initialize vertices based on shape and initial dimensions (only on shape change or manual reset)
   const initVertices = useCallback(() => {
@@ -220,37 +235,71 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
     }
   }, [shape, customSides, customPoints]);
 
-  // Synchronize fixtures whenever options change (chandeliers, spots, pipe passes)
+  // Calculate bounding box of ceiling polygon
+  const getRoomBounds = useCallback((pts: TouchPoint[]) => {
+    if (!pts || pts.length === 0) {
+      return {
+        minX: padding,
+        maxX: canvasWidth - padding,
+        minY: padding,
+        maxY: canvasHeight - padding,
+        width: Math.max(1, canvasWidth - padding * 2),
+        height: Math.max(1, canvasHeight - padding * 2),
+      };
+    }
+    const xs = pts.map((p) => p.x);
+    const ys = pts.map((p) => p.y);
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const minY = Math.min(...ys);
+    const maxY = Math.max(...ys);
+    return {
+      minX,
+      maxX,
+      minY,
+      maxY,
+      width: Math.max(1, maxX - minX),
+      height: Math.max(1, maxY - minY),
+    };
+  }, [canvasWidth, canvasHeight, padding]);
+
+  // Synchronize fixtures whenever options change or initialFixtures provided
   useEffect(() => {
-    const cX = vertices.length > 0 
-      ? vertices.reduce((acc, v) => acc + v.x, 0) / vertices.length 
-      : canvasWidth / 2;
-    const cY = vertices.length > 0 
-      ? vertices.reduce((acc, v) => acc + v.y, 0) / vertices.length 
-      : canvasHeight / 2;
-    const availW = canvasWidth - padding * 2;
-    const availH = canvasHeight - padding * 2;
+    const bounds = getRoomBounds(vertices);
+    const cX = bounds.minX + bounds.width / 2;
+    const cY = bounds.minY + bounds.height / 2;
+    const availW = bounds.width;
+    const availH = bounds.height;
 
     const newFixtures: FixturePoint[] = [];
+    const initialMap = new Map((initialFixtures || []).map((f) => [f.id, f]));
 
-    // Chandeliers
+    // Chandeliers (1 to 6)
     const chanCount = Math.min(options.chandeliersCount || 0, 6);
     if (chanCount === 1) {
+      const defX = cX;
+      const defY = cY;
       newFixtures.push({
         id: 'fix-chan-1',
         type: 'chandelier',
-        x: cX,
-        y: cY,
+        x: defX,
+        y: defY,
+        relX: (defX - bounds.minX) / bounds.width,
+        relY: (defY - bounds.minY) / bounds.height,
         label: 'Люстра',
       });
     } else if (chanCount > 1) {
       for (let i = 0; i < chanCount; i++) {
-        const offset = (i - (chanCount - 1) / 2) * 55;
+        const offset = (i - (chanCount - 1) / 2) * Math.min(55, availW / (chanCount + 1));
+        const defX = cX + offset;
+        const defY = cY;
         newFixtures.push({
           id: `fix-chan-${i + 1}`,
           type: 'chandelier',
-          x: cX + offset,
-          y: cY,
+          x: defX,
+          y: defY,
+          relX: (defX - bounds.minX) / bounds.width,
+          relY: (defY - bounds.minY) / bounds.height,
           label: `Люстра ${i + 1}`,
         });
       }
@@ -259,15 +308,19 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
     // Spots (GX53)
     const spotsCount = Math.min(options.spotsGX53Count || 0, 24);
     if (spotsCount > 0) {
-      const radiusX = Math.min(availW * 0.3, 115);
-      const radiusY = Math.min(availH * 0.3, 85);
+      const radiusX = Math.min(availW * 0.32, 115);
+      const radiusY = Math.min(availH * 0.32, 85);
       for (let i = 0; i < spotsCount; i++) {
         const angle = (i / spotsCount) * Math.PI * 2;
+        const defX = Math.round(cX + Math.cos(angle) * radiusX);
+        const defY = Math.round(cY + Math.sin(angle) * radiusY);
         newFixtures.push({
           id: `fix-spot-${i}`,
           type: 'spot',
-          x: Math.round(cX + Math.cos(angle) * radiusX),
-          y: Math.round(cY + Math.sin(angle) * radiusY),
+          x: defX,
+          y: defY,
+          relX: (defX - bounds.minX) / bounds.width,
+          relY: (defY - bounds.minY) / bounds.height,
           label: `Спот ${i + 1}`,
         });
       }
@@ -276,25 +329,52 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
     // Pipe passes
     const pipeCount = Math.min(options.pipePassCount || 0, 8);
     for (let i = 0; i < pipeCount; i++) {
-      const cornerV = vertices[i % (vertices.length || 1)] || { x: padding + 25, y: padding + 25 };
+      const cornerV = vertices[i % (vertices.length || 1)] || { x: bounds.minX + 25, y: bounds.minY + 25 };
       const offsetX = 22 + (i > 0 ? (i * 12) : 0);
       const offsetY = 22;
+      const defX = cornerV.x + offsetX;
+      const defY = cornerV.y + offsetY;
       newFixtures.push({
         id: `fix-pipe-${i + 1}`,
         type: 'pipe',
-        x: cornerV.x + offsetX,
-        y: cornerV.y + offsetY,
+        x: defX,
+        y: defY,
+        relX: (defX - bounds.minX) / bounds.width,
+        relY: (defY - bounds.minY) / bounds.height,
         label: pipeCount > 1 ? `Труба ${i + 1}` : 'Стояк',
       });
     }
 
-    // Preserve positions of already dragged fixtures
+    // Preserve positions of already dragged or previously saved fixtures
     setFixtures((prev) => {
       const prevMap = new Map(prev.map((f) => [f.id, f]));
       return newFixtures.map((nf) => {
         const existing = prevMap.get(nf.id);
         if (existing) {
+          if (existing.relX !== undefined && existing.relY !== undefined) {
+            const rx = existing.relX;
+            const ry = existing.relY;
+            return {
+              ...nf,
+              x: Math.round(bounds.minX + rx * bounds.width),
+              y: Math.round(bounds.minY + ry * bounds.height),
+              relX: rx,
+              relY: ry,
+            };
+          }
           return { ...nf, x: existing.x, y: existing.y };
+        }
+        const saved = initialMap.get(nf.id);
+        if (saved) {
+          const rx = saved.relX ?? ((saved.x ?? nf.x) - bounds.minX) / bounds.width;
+          const ry = saved.relY ?? ((saved.y ?? nf.y) - bounds.minY) / bounds.height;
+          return {
+            ...nf,
+            x: Math.round(bounds.minX + rx * bounds.width),
+            y: Math.round(bounds.minY + ry * bounds.height),
+            relX: rx,
+            relY: ry,
+          };
         }
         return nf;
       });
@@ -303,11 +383,53 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
     options.chandeliersCount,
     options.spotsGX53Count,
     options.pipePassCount,
-    canvasWidth,
-    canvasHeight,
-    padding,
-    vertices.length,
+    vertices,
+    getRoomBounds,
   ]);
+
+  // Synchronize initialFixtures if updated externally
+  useEffect(() => {
+    if (!initialFixtures || initialFixtures.length === 0) return;
+    const incomingKey = JSON.stringify(
+      initialFixtures.map((f) => ({ id: f.id, relX: f.relX, relY: f.relY }))
+    );
+    if (incomingKey === lastEmittedFixturesRef.current) return;
+    lastEmittedFixturesRef.current = incomingKey;
+
+    const bounds = getRoomBounds(vertices);
+    const initialMap = new Map(initialFixtures.map((f) => [f.id, f]));
+
+    setFixtures((prev) => {
+      const prevIds = new Set(prev.map((f) => f.id));
+      const updatedPrev = prev.map((f) => {
+        const saved = initialMap.get(f.id);
+        if (saved && saved.relX !== undefined && saved.relY !== undefined) {
+          return {
+            ...f,
+            x: Math.round(bounds.minX + saved.relX * bounds.width),
+            y: Math.round(bounds.minY + saved.relY * bounds.height),
+            relX: saved.relX,
+            relY: saved.relY,
+          };
+        }
+        return f;
+      });
+
+      const missing = initialFixtures
+        .filter((f) => !prevIds.has(f.id))
+        .map((f) => ({
+          id: f.id,
+          type: f.type,
+          x: Math.round(bounds.minX + f.relX * bounds.width),
+          y: Math.round(bounds.minY + f.relY * bounds.height),
+          relX: f.relX,
+          relY: f.relY,
+          label: f.label,
+        }));
+
+      return [...updatedPrev, ...missing];
+    });
+  }, [initialFixtures, vertices, getRoomBounds]);
 
   // Synchronize vertices from dimension props when NOT dragging and NOT self-emitted
   useEffect(() => {
@@ -793,8 +915,16 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
         cornersCount: updatedVertices.length,
       });
     } else if (dragType === 'fixture') {
+      const bounds = getRoomBounds(vertices);
       setFixtures((prev) =>
-        prev.map((f) => (f.id === activeDragId ? { ...f, x: targetX, y: targetY } : f))
+        prev.map((f) => {
+          if (f.id === activeDragId) {
+            const rx = Math.round(((targetX - bounds.minX) / bounds.width) * 1000) / 1000;
+            const ry = Math.round(((targetY - bounds.minY) / bounds.height) * 1000) / 1000;
+            return { ...f, x: targetX, y: targetY, relX: rx, relY: ry };
+          }
+          return f;
+        })
       );
     }
   };
@@ -802,6 +932,18 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
   // Pointer drag end
   const handlePointerUp = (e: React.PointerEvent) => {
     if (activeDragId) {
+      if (dragType === 'fixture') {
+        const bounds = getRoomBounds(vertices);
+        const updated = fixtures.map((f) => ({
+          ...f,
+          relX: Math.round(((f.x - bounds.minX) / bounds.width) * 1000) / 1000,
+          relY: Math.round(((f.y - bounds.minY) / bounds.height) * 1000) / 1000,
+        }));
+        lastEmittedFixturesRef.current = JSON.stringify(
+          updated.map((f) => ({ id: f.id, relX: f.relX, relY: f.relY }))
+        );
+        onFixturesChange?.(updated);
+      }
       try {
         (e.target as HTMLElement).releasePointerCapture(e.pointerId);
       } catch {
@@ -919,10 +1061,10 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-50 dark:bg-cyan-950/80 border border-cyan-200 dark:border-cyan-800 text-cyan-800 dark:text-cyan-300 font-mono text-xs font-bold">
             <Move className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
-            <span>Сенсорне креслення (Touch Drag)</span>
+            <span>{t.touchEditorTitle}</span>
           </div>
           <span className="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:inline">
-            Тягніть кути та світильники пальцем
+            {t.touchEditorHint}
           </span>
         </div>
 
@@ -934,7 +1076,7 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
               type="button"
               onClick={handleZoomOut}
               className="p-1 rounded text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition"
-              title="Зменшити масштаб (-)"
+              title={t.zoomOut}
             >
               <ZoomOut className="w-3.5 h-3.5" />
             </button>
@@ -942,7 +1084,7 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
               type="button"
               onClick={handleZoomReset}
               className="px-1.5 py-0.5 text-[10px] font-mono font-bold text-slate-700 dark:text-slate-200 hover:text-cyan-600 dark:hover:text-cyan-400"
-              title="Скинути масштаб (100%)"
+              title={t.resetZoom}
             >
               {Math.round(zoomLevel * 100)}%
             </button>
@@ -950,7 +1092,7 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
               type="button"
               onClick={handleZoomIn}
               className="p-1 rounded text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition"
-              title="Збільшити масштаб (+)"
+              title={t.zoomIn}
             >
               <ZoomIn className="w-3.5 h-3.5" />
             </button>
@@ -964,10 +1106,10 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
                 ? 'bg-cyan-600 text-white'
                 : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:text-white dark:border-transparent'
             }`}
-            title="Прив'язка до сітки"
+            title={t.gridSnap}
           >
             <Magnet className="w-3.5 h-3.5" />
-            <span className="hidden xs:inline">Сітка</span>
+            <span className="hidden xs:inline">{t.gridSnap}</span>
           </button>
 
           <button
@@ -975,10 +1117,10 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
             onClick={handleAddCorner}
             disabled={vertices.length >= 10}
             className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 dark:border-transparent text-xs font-semibold transition flex items-center gap-1"
-            title="Додати додатковий кут у контур"
+            title={t.addCorner}
           >
             <Plus className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
-            <span className="hidden xs:inline">+Кут</span>
+            <span className="hidden xs:inline">{t.addCorner}</span>
           </button>
 
           {selectedVertexId && vertices.length > 3 && (
@@ -986,10 +1128,10 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
               type="button"
               onClick={handleRemoveCorner}
               className="px-2 py-1 rounded-lg bg-red-100 text-red-800 hover:bg-red-200 border border-red-200 dark:bg-red-950 dark:text-red-300 dark:hover:bg-red-900 dark:border-transparent text-xs font-semibold transition flex items-center gap-1"
-              title="Видалити обраний кут"
+              title={t.removeCorner}
             >
               <Trash2 className="w-3.5 h-3.5" />
-              <span>Видалити</span>
+              <span>{t.delete}</span>
             </button>
           )}
 
@@ -997,7 +1139,7 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
             type="button"
             onClick={initVertices}
             className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-400 dark:hover:text-white dark:border-transparent transition"
-            title="Скинути до вихідних розмірів"
+            title={t.resetBlueprint}
           >
             <RotateCcw className="w-3.5 h-3.5" />
           </button>
@@ -1006,7 +1148,7 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
             type="button"
             onClick={() => setShowInstructions(!showInstructions)}
             className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-cyan-700 border border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-400 dark:hover:text-cyan-400 dark:border-transparent transition"
-            title="Інструкція"
+            title={t.touchEditorInstructionTitle}
           >
             <HelpCircle className="w-3.5 h-3.5" />
           </button>
@@ -1017,13 +1159,13 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
       {showInstructions && (
         <div className="mb-3 p-3 rounded-xl bg-cyan-50 dark:bg-cyan-950/70 border border-cyan-200 dark:border-cyan-800/80 text-xs text-cyan-900 dark:text-cyan-200 leading-relaxed flex items-start justify-between gap-2 animate-in fade-in">
           <div>
-            <strong>Як редагувати креслення пальцем на смартфоні/планшеті:</strong>
+            <strong>{t.touchEditorInstructionTitle}</strong>
             <ul className="list-disc list-inside mt-1 space-y-0.5 text-slate-700 dark:text-slate-300 text-[11px]">
-              <li>Доторкніться до синього кружка кута (A, B, C...) і тягніть у будь-який бік без стрибків.</li>
-              <li>Кнопками + та - у верхньому меню регулюйте масштаб відображення для точного підгону.</li>
-              <li>Розміри стін, діагоналі та площа перераховуються миттєво в реальному часі.</li>
-              <li>Значки люстри та спотів теж можна переміщати пальцем у потрібне місце кімнати.</li>
-              <li>Кнопка «+Кут» дозволяє побудувати 5-кутні та багатокутні кімнати.</li>
+              <li>{t.touchEditorInstruction1}</li>
+              <li>{t.touchEditorInstruction2}</li>
+              <li>{t.touchEditorInstruction3}</li>
+              <li>{t.touchEditorInstruction4}</li>
+              <li>{t.touchEditorInstruction5}</li>
             </ul>
           </div>
           <button
@@ -1033,6 +1175,36 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
           >
             ✕
           </button>
+        </div>
+      )}
+
+      {/* Curtain Niche Side Selector if niche is enabled */}
+      {Boolean(options.curtainNicheMeters && options.curtainNicheMeters > 0 && vertices.length >= 2) && (
+        <div className="mb-3 px-3 py-2 rounded-xl bg-purple-50 dark:bg-purple-950/60 border border-purple-200 dark:border-purple-800/70 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-1.5 text-purple-900 dark:text-purple-200 font-semibold">
+            <span className="w-2.5 h-2.5 rounded-full bg-purple-500 animate-pulse" />
+            <span>{t.curtainNicheBinding} ({options.curtainNicheMeters}{t.unitM}):</span>
+          </div>
+          <div className="flex items-center gap-1">
+            {vertices.map((_, idx) => {
+              const letter = String.fromCharCode(65 + idx);
+              const isSelected = (options.curtainNicheSide || 'A') === letter;
+              return (
+                <button
+                  key={`niche-side-${letter}`}
+                  type="button"
+                  onClick={() => onOptionsChange?.({ ...options, curtainNicheSide: letter })}
+                  className={`px-2.5 py-0.5 rounded-md text-xs font-bold transition ${
+                    isSelected
+                      ? 'bg-purple-600 text-white shadow-xs'
+                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-purple-100 dark:hover:bg-purple-900/40 border border-slate-200 dark:border-slate-700'
+                  }`}
+                >
+                  {t.wall} {letter}
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -1109,21 +1281,53 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
 
           {/* Curtain Niche (Ніша штор / карниза) if selected */}
           {Boolean(options.curtainNicheMeters && options.curtainNicheMeters > 0 && vertices.length >= 2) && (() => {
-            const v0 = vertices[0];
-            const v1 = vertices[1];
-            const angle = Math.atan2(v1.y - v0.y, v1.x - v0.x);
-            const inNormX = -Math.sin(angle) * 16;
-            const inNormY = Math.cos(angle) * 16;
+            const sideLetter = options.curtainNicheSide || 'A';
+            const requestedIdx = sideLetter.charCodeAt(0) - 65;
+            const sideIdx = (requestedIdx >= 0 && requestedIdx < vertices.length) ? requestedIdx : 0;
+            const effectiveLetter = String.fromCharCode(65 + sideIdx);
 
-            const x1 = v0.x + Math.cos(angle) * 10 + inNormX;
-            const y1 = v0.y + Math.sin(angle) * 10 + inNormY;
-            const x2 = v1.x - Math.cos(angle) * 10 + inNormX;
-            const y2 = v1.y - Math.sin(angle) * 10 + inNormY;
+            const v0 = vertices[sideIdx];
+            const v1 = vertices[(sideIdx + 1) % vertices.length];
+            const dx = v1.x - v0.x;
+            const dy = v1.y - v0.y;
+            const len = Math.hypot(dx, dy) || 1;
+            const tx = dx / len;
+            const ty = dy / len;
+
+            // Inward normal using signed polygon area
+            let signedArea = 0;
+            for (let i = 0; i < vertices.length; i++) {
+              const cur = vertices[i];
+              const nxt = vertices[(i + 1) % vertices.length];
+              signedArea += cur.x * nxt.y - nxt.x * cur.y;
+            }
+            const isClockwise = signedArea >= 0;
+            const normX = isClockwise ? -ty : ty;
+            const normY = isClockwise ? tx : -tx;
+
+            const inNormX = normX * 16;
+            const inNormY = normY * 16;
+
+            const margin = Math.min(15, len * 0.1);
+            const x1 = v0.x + tx * margin + inNormX;
+            const y1 = v0.y + ty * margin + inNormY;
+            const x2 = v1.x - tx * margin + inNormX;
+            const y2 = v1.y - ty * margin + inNormY;
             const midX = (x1 + x2) / 2;
             const midY = (y1 + y2) / 2;
 
             return (
-              <g key="touch-curtain-niche" className="pointer-events-none">
+              <g 
+                key="touch-curtain-niche" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const nextIdx = (sideIdx + 1) % vertices.length;
+                  const nextLetter = String.fromCharCode(65 + nextIdx);
+                  onOptionsChange?.({ ...options, curtainNicheSide: nextLetter });
+                }}
+                className="cursor-pointer group"
+              >
+                <title>Натисніть щоб перемістити нішу на іншу стіну (Стіна {effectiveLetter})</title>
                 <line
                   x1={x1}
                   y1={y1}
@@ -1150,15 +1354,16 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
                   strokeWidth="2.5"
                 />
                 <rect
-                  x={midX - 48}
-                  y={midY - 8}
-                  width="96"
-                  height="16"
-                  rx="4"
+                  x={midX - 58}
+                  y={midY - 9}
+                  width="116"
+                  height="18"
+                  rx="5"
                   fill="#581c87"
-                  fillOpacity="0.92"
+                  fillOpacity="0.95"
                   stroke="#c084fc"
-                  strokeWidth="0.8"
+                  strokeWidth="1"
+                  className="transition group-hover:fill-purple-800"
                 />
                 <text
                   x={midX}
@@ -1169,7 +1374,7 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
                   textAnchor="middle"
                   fontFamily="sans-serif"
                 >
-                  Ніша штор: {options.curtainNicheMeters}м
+                  {t.niche} {options.curtainNicheMeters}{t.unitM} ({t.wall} {effectiveLetter}) ↻
                 </text>
               </g>
             );
@@ -1303,12 +1508,12 @@ export const TouchBlueprintEditor: React.FC<TouchBlueprintEditorProps> = ({
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-cyan-500" />
           <span className="text-slate-700 dark:text-slate-300 font-medium">
-            Кутів: <strong className="text-slate-900 dark:text-white">{vertices.length}</strong> | S ={' '}
-            <strong className="text-cyan-700 dark:text-cyan-400 font-mono">{currentMetrics.area} м²</strong>
+            {t.corners}: <strong className="text-slate-900 dark:text-white">{vertices.length}</strong> | S ={' '}
+            <strong className="text-cyan-700 dark:text-cyan-400 font-mono">{currentMetrics.area} {t.unitM2}</strong>
           </span>
         </div>
         <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
-          {snapToGrid ? "Прив'язка до сітки: УВІМК" : 'Вільне переміщення'}
+          {snapToGrid ? t.snapToGridOn : t.freeMove}
         </span>
       </div>
     </div>

@@ -21,10 +21,12 @@ import {
   CeilingComplexity, 
   ProfileType, 
   RoomOptions,
+  RoomShape,
+  PlacedFixture,
   MasterProfile 
 } from './types/database';
 import { AppStorage } from './db/storage';
-import { calculateCeilingCost } from './utils/calculator';
+import { calculateCeilingCost, Point2D } from './utils/calculator';
 import { generateEstimateDocNumber } from './utils/documentNumber';
 import { MasterDashboard } from './components/MasterDashboard';
 import { ClientObjectManager } from './components/ClientObjectManager';
@@ -412,6 +414,21 @@ export default function App() {
   const handleSaveFromCalculator = (data: {
     objectId: string;
     roomName: string;
+    shape?: RoomShape;
+    length?: number;
+    width?: number;
+    height?: number;
+    sideA?: number;
+    sideB?: number;
+    sideC?: number;
+    sideD?: number;
+    sideE?: number;
+    sideF?: number;
+    customSides?: number[];
+    customPoints?: Point2D[];
+    diagonal1?: number;
+    diagonal2?: number;
+    cornersCount?: number;
     area: number;
     perimeter: number;
     materialType: MaterialType | string;
@@ -419,6 +436,7 @@ export default function App() {
     profileType: ProfileType | string;
     options: RoomOptions;
     customOptions?: { id: string; name: string; unit: string; price: number; quantity: number }[];
+    fixtures?: PlacedFixture[];
   }) => {
     const cost = calculateCeilingCost({
       area: data.area,
@@ -443,19 +461,30 @@ export default function App() {
       },
       objectId: data.objectId,
       name: data.roomName,
-      shape: 'rectangle',
-      length: Math.round(Math.sqrt(data.area * 1.3) * 10) / 10,
-      width: Math.round((data.area / Math.sqrt(data.area * 1.3)) * 10) / 10,
-      height: 2.7,
+      shape: data.shape || 'rectangle',
+      length: data.length || Math.round(Math.sqrt(data.area * 1.3) * 10) / 10,
+      width: data.width || Math.round((data.area / Math.sqrt(data.area * 1.3)) * 10) / 10,
+      height: data.height || 2.7,
+      sideA: data.sideA,
+      sideB: data.sideB,
+      sideC: data.sideC,
+      sideD: data.sideD,
+      sideE: data.sideE,
+      sideF: data.sideF,
+      customSides: data.customSides,
+      customPoints: data.customPoints,
+      diagonal1: data.diagonal1,
+      diagonal2: data.diagonal2,
       area: data.area,
       perimeter: data.perimeter,
-      cornersCount: 4,
+      cornersCount: data.cornersCount || 4,
       materialType: data.materialType,
       canvasBrand: 'MSD Premium',
       canvasColor: locale === 'en' ? 'White Matte (303)' : 'Білий матовий (303)',
       complexity: data.complexity,
       profileType: data.profileType,
       options: data.options,
+      fixtures: data.fixtures,
       customOptions: data.customOptions,
       comments: locale === 'en' ? 'Added from quick calculator' : 'Додано з швидкого калькулятора',
       photos: [],

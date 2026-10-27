@@ -25,6 +25,7 @@ import {
   MasterPriceList, 
   RoomOptions,
   RoomShape,
+  PlacedFixture,
   ObjectProject,
   Client 
 } from '../types/database';
@@ -56,6 +57,21 @@ interface CalculatorModuleProps {
   onSaveToProject?: (data: {
     objectId: string;
     roomName: string;
+    shape?: RoomShape;
+    length?: number;
+    width?: number;
+    height?: number;
+    sideA?: number;
+    sideB?: number;
+    sideC?: number;
+    sideD?: number;
+    sideE?: number;
+    sideF?: number;
+    customSides?: number[];
+    customPoints?: Point2D[];
+    diagonal1?: number;
+    diagonal2?: number;
+    cornersCount?: number;
     area: number;
     perimeter: number;
     materialType: MaterialType | string;
@@ -63,6 +79,7 @@ interface CalculatorModuleProps {
     profileType: ProfileType | string;
     options: RoomOptions;
     customOptions?: { id: string; name: string; unit: string; price: number; quantity: number }[];
+    fixtures?: PlacedFixture[];
   }) => void;
 }
 
@@ -222,7 +239,11 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({
   const [spotsGX53Count, setSpotsGX53Count] = useState<number>(4);
   const [pipePassCount, setPipePassCount] = useState<number>(1);
   const [curtainNicheMeters, setCurtainNicheMeters] = useState<number>(3.0);
+  const [curtainNicheSide, setCurtainNicheSide] = useState<string>('A');
   const [hardWallMeters, setHardWallMeters] = useState<number>(0);
+
+  // Placed fixtures on ceiling scheme
+  const [placedFixtures, setPlacedFixtures] = useState<PlacedFixture[]>([]);
 
   // Custom options and works quantities map
   const [customOptionsQuantities, setCustomOptionsQuantities] = useState<Record<string, number>>({});
@@ -258,6 +279,7 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({
     spotsGX53Count,
     pipePassCount,
     curtainNicheMeters,
+    curtainNicheSide,
     extraCorners: Math.max(0, effectiveCorners - 4),
     hardWallMeters,
   };
@@ -315,6 +337,21 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({
     onSaveToProject({
       objectId: selectedObjectId,
       roomName: roomNameInput,
+      shape: inputMode === 'by_dimensions' ? shape : 'rectangle',
+      length: inputMode === 'by_dimensions' ? length : Math.round(Math.sqrt(directArea * 1.3) * 10) / 10,
+      width: inputMode === 'by_dimensions' ? width : Math.round((directArea / Math.sqrt(directArea * 1.3)) * 10) / 10,
+      height: 2.7,
+      sideA: shape === 'l_shaped' ? sideA : undefined,
+      sideB: shape === 'l_shaped' ? sideB : undefined,
+      sideC: shape === 'l_shaped' ? sideC : undefined,
+      sideD: shape === 'l_shaped' ? sideD : undefined,
+      sideE: shape === 'l_shaped' ? sideE : undefined,
+      sideF: shape === 'l_shaped' ? sideF : undefined,
+      customSides: shape === 'custom' ? customSides : undefined,
+      customPoints: shape === 'custom' ? customPoints : undefined,
+      diagonal1: Math.round(Math.hypot(length, width) * 100) / 100,
+      diagonal2: Math.round(Math.hypot(length, width) * 100) / 100,
+      cornersCount: effectiveCorners,
       area: effectiveArea,
       perimeter: effectivePerimeter,
       materialType,
@@ -322,6 +359,7 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({
       profileType,
       options: currentOptions,
       customOptions: customOptionsList.filter((co) => co.quantity > 0),
+      fixtures: placedFixtures,
     });
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 3000);
@@ -455,7 +493,14 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({
                       customSides={shape === 'custom' ? customSides : undefined}
                       customPoints={shape === 'custom' ? customPoints : undefined}
                       options={currentOptions}
+                      initialFixtures={placedFixtures}
+                      onFixturesChange={setPlacedFixtures}
+                      onOptionsChange={(opt) => {
+                        if (opt.curtainNicheSide) setCurtainNicheSide(opt.curtainNicheSide);
+                      }}
                       onDimensionsChange={handleTouchDimensionsChange}
+                      locale={locale}
+                      t={t}
                     />
                   ) : (
                     <RoomBlueprint
@@ -474,6 +519,9 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({
                       area={effectiveArea}
                       perimeter={effectivePerimeter}
                       options={currentOptions}
+                      fixtures={placedFixtures}
+                      locale={locale}
+                      t={t}
                     />
                   )}
                 </div>
@@ -945,16 +993,41 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({
               )}
 
               {!(priceList.deletedStandardKeys || []).includes('curtainNichePerMeter') && (
-                <NumericInput
-                  label={t.curtainNiche}
-                  value={curtainNicheMeters}
-                  onChange={setCurtainNicheMeters}
-                  unit="м"
-                  min={0}
-                  steppers={[-0.5, 0.5]}
-                  helperText={`(${priceList.curtainNichePerMeter} ${currencySymbol}/м)`}
-                  numpadTitle={t.curtainNiche}
-                />
+                <div className="space-y-2">
+                  <NumericInput
+                    label={t.curtainNiche}
+                    value={curtainNicheMeters}
+                    onChange={setCurtainNicheMeters}
+                    unit="м"
+                    min={0}
+                    steppers={[-0.5, 0.5]}
+                    helperText={`(${priceList.curtainNichePerMeter} ${currencySymbol}/м)`}
+                    numpadTitle={t.curtainNiche}
+                  />
+                  {curtainNicheMeters > 0 && (
+                    <div className="p-2.5 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/60 flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <span className="font-semibold text-purple-900 dark:text-purple-200">
+                        Прив'язка ніші до стіни:
+                      </span>
+                      <div className="flex flex-wrap items-center gap-1">
+                        {Array.from({ length: Math.max(4, effectiveCorners) }, (_, i) => String.fromCharCode(65 + i)).map((letter) => (
+                          <button
+                            key={`calc-niche-side-${letter}`}
+                            type="button"
+                            onClick={() => setCurtainNicheSide(letter)}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${
+                              curtainNicheSide === letter
+                                ? 'bg-purple-600 text-white shadow-xs'
+                                : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-purple-100 dark:hover:bg-purple-900/40 border border-slate-200 dark:border-slate-700'
+                            }`}
+                          >
+                            Стіна {letter}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
 
               {!(priceList.deletedStandardKeys || []).includes('hardWallPerMeter') && (

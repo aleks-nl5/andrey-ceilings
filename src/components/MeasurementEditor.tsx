@@ -31,6 +31,8 @@ import { AppStorage } from '../db/storage';
 import { 
   RoomMeasurement, 
   RoomShape, 
+  RoomOptions,
+  PlacedFixture,
   MaterialType, 
   CeilingComplexity, 
   ProfileType, 
@@ -58,7 +60,7 @@ import { PhotoUploader } from './PhotoUploader';
 import { NumericInput } from './NumericInput';
 import { PrintEstimateModal } from './PrintEstimateModal';
 import { getGoogleMapsUrl, getWazeUrl } from '../utils/navigation';
-import { Translations, Locale } from '../i18n/translations';
+import { Translations, Locale, ROOM_PRESETS } from '../i18n/translations';
 
 interface MeasurementEditorProps {
   initialMeasurement?: Partial<RoomMeasurement>;
@@ -74,19 +76,6 @@ interface MeasurementEditorProps {
   onSave: (measurement: RoomMeasurement) => void;
   onCancel: () => void;
 }
-
-const ROOM_NAME_PRESETS_UK = [
-  'Вітальня', 
-  'Спальня', 
-  'Кухня', 
-  'Передпокій', 
-  'Санвузол', 
-  'Ванна', 
-  'Дитяча', 
-  'Коридор', 
-  'Кабінет', 
-  'Балкон'
-];
 
 export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
   initialMeasurement,
@@ -271,7 +260,7 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
   );
 
   // Options
-  const [options, setOptions] = useState(initialMeasurement?.options || {
+  const [options, setOptions] = useState<RoomOptions>(initialMeasurement?.options || {
     lightLinesMeters: 0,
     shadowProfileMeters: 0,
     floatingCeilingMeters: 0,
@@ -279,9 +268,13 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
     spotsGX53Count: 4,
     pipePassCount: 1,
     curtainNicheMeters: 0,
+    curtainNicheSide: 'A',
     extraCorners: 0,
     hardWallMeters: 0,
   });
+
+  // Saved placed fixtures (chandeliers, spots, pipes)
+  const [fixtures, setFixtures] = useState<PlacedFixture[]>(initialMeasurement?.fixtures || []);
 
   // Custom options
   const [customOptionsQuantities, setCustomOptionsQuantities] = useState<Record<string, number>>(() => {
@@ -417,6 +410,7 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
       complexity,
       profileType,
       options,
+      fixtures,
       customOptions: customOptionsList.filter((co) => co.quantity > 0),
       comments,
       photos,
@@ -539,7 +533,7 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
           {t.roomTitle}
         </label>
         <div className="flex flex-wrap gap-2">
-          {ROOM_NAME_PRESETS_UK.map((preset) => (
+          {(ROOM_PRESETS[locale] || ROOM_PRESETS.uk).map((preset) => (
             <button
               key={preset}
               type="button"
@@ -632,7 +626,12 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
             diagonal1={diagonal1}
             diagonal2={diagonal2}
             options={options}
+            initialFixtures={fixtures}
+            onFixturesChange={setFixtures}
+            onOptionsChange={(opt) => setOptions((prev) => ({ ...prev, ...opt }))}
             onDimensionsChange={handleTouchDimensionsChange}
+            locale={locale}
+            t={t}
           />
         ) : (
           <RoomBlueprint
@@ -653,7 +652,10 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
             area={effectiveArea}
             perimeter={effectivePerimeter}
             options={options}
+            fixtures={fixtures}
             canvasColorName={canvasColor}
+            locale={locale}
+            t={t}
           />
         )}
       </div>
@@ -1119,15 +1121,40 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
           )}
 
           {!(priceList.deletedStandardKeys || []).includes('curtainNichePerMeter') && (
-            <NumericInput
-              label={t.curtainNiche}
-              value={options.curtainNicheMeters}
-              onChange={(val) => setOptions((prev) => ({ ...prev, curtainNicheMeters: val }))}
-              unit="м"
-              min={0}
-              steppers={[-0.5, 0.5]}
-              numpadTitle={t.curtainNiche}
-            />
+            <div className="space-y-2">
+              <NumericInput
+                label={t.curtainNiche}
+                value={options.curtainNicheMeters}
+                onChange={(val) => setOptions((prev) => ({ ...prev, curtainNicheMeters: val }))}
+                unit="м"
+                min={0}
+                steppers={[-0.5, 0.5]}
+                numpadTitle={t.curtainNiche}
+              />
+              {Boolean(options.curtainNicheMeters && options.curtainNicheMeters > 0) && (
+                <div className="p-2.5 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/60 flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <span className="font-semibold text-purple-900 dark:text-purple-200 flex items-center gap-1">
+                    <span>Прив'язка ніші до стіни:</span>
+                  </span>
+                  <div className="flex flex-wrap items-center gap-1">
+                    {Array.from({ length: Math.max(4, effectiveCorners) }, (_, i) => String.fromCharCode(65 + i)).map((letter) => (
+                      <button
+                        key={`meas-niche-side-${letter}`}
+                        type="button"
+                        onClick={() => setOptions((prev) => ({ ...prev, curtainNicheSide: letter }))}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${
+                          (options.curtainNicheSide || 'A') === letter
+                            ? 'bg-purple-600 text-white shadow-xs'
+                            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-purple-100 dark:hover:bg-purple-900/40 border border-slate-200 dark:border-slate-700'
+                        }`}
+                      >
+                        Стіна {letter}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           )}
 
           {!(priceList.deletedStandardKeys || []).includes('hardWallPerMeter') && (
