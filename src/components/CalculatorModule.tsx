@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Calculator, 
   Sparkles, 
@@ -94,6 +94,19 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({
 }) => {
   // Mode: 'by_dimensions' (by shape & blueprint) vs 'by_area' (direct square meters)
   const [inputMode, setInputMode] = useState<'by_dimensions' | 'by_area'>('by_dimensions');
+
+  // Scroll to top on mount and when switching calculator input modes
+  useEffect(() => {
+    const scrollToPageTop = () => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+    };
+
+    scrollToPageTop();
+    const frameId = requestAnimationFrame(scrollToPageTop);
+    return () => cancelAnimationFrame(frameId);
+  }, [inputMode]);
 
   // Shape and geometry
   const [shape, setShape] = useState<RoomShape>('rectangle');

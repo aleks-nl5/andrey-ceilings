@@ -110,6 +110,31 @@ export default function App() {
     refreshData();
   }, []);
 
+  // Disable browser automatic scroll restoration to avoid opening screens at arbitrary offsets
+  useEffect(() => {
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+  }, []);
+
+  // Scroll to top on any menu tab change or major subscreen navigation
+  useEffect(() => {
+    const scrollToPageTop = () => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+    };
+
+    scrollToPageTop();
+    const frameId = requestAnimationFrame(scrollToPageTop);
+    const timeoutId = setTimeout(scrollToPageTop, 50);
+
+    return () => {
+      cancelAnimationFrame(frameId);
+      clearTimeout(timeoutId);
+    };
+  }, [activeTab, isEditingMeasurement, selectedObjectId]);
+
   // 1. Mobile Hardware / Gesture Back Button & History Management
   useEffect(() => {
     // Ensure initial root state is set
@@ -219,12 +244,21 @@ export default function App() {
 
   // Navigation helpers that maintain browser history stack for hardware Back button
   const navigateToTab = (tab: typeof activeTab) => {
-    if (tab === activeTab) return;
+    if (tab === activeTab) {
+      // Re-tapping current active tab scrolls to top smoothly
+      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+      return;
+    }
     window.history.pushState({ type: 'tab', tab }, '');
     setActiveTab(tab);
     if (tab !== 'measurements') {
       setIsEditingMeasurement(false);
     }
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
   };
 
   const handleSelectObjectDetail = (id: string | null) => {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Ruler, 
   Layers, 
@@ -95,6 +95,19 @@ export const MeasurementEditor: React.FC<MeasurementEditorProps> = ({
   const [isPrintModalOpen, setIsPrintModalOpen] = useState<boolean>(false);
   const activeObject = allObjects.find((o) => o.id === currentObjectId) || parentObject;
   const activeClient = allClients.find((c) => c.id === activeObject?.clientId);
+
+  // Always scroll to top when editor opens
+  useEffect(() => {
+    const scrollToPageTop = () => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+    };
+
+    scrollToPageTop();
+    const frameId = requestAnimationFrame(scrollToPageTop);
+    return () => cancelAnimationFrame(frameId);
+  }, []);
 
   // Quick comment tags (customizable, saved to AppStorage)
   const [quickTags, setQuickTags] = useState<string[]>(() => AppStorage.getQuickCommentTags());

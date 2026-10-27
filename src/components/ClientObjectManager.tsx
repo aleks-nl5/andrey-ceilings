@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Building2, 
   User, 
@@ -90,6 +90,19 @@ export const ClientObjectManager: React.FC<ClientObjectManagerProps> = ({
     setInternalSelectedObjId(id);
     if (onSelectObjectId) onSelectObjectId(id);
   };
+
+  // Scroll to top when switching sub-tabs ('objects' | 'clients') or viewing object details
+  useEffect(() => {
+    const scrollToPageTop = () => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+    };
+
+    scrollToPageTop();
+    const frameId = requestAnimationFrame(scrollToPageTop);
+    return () => cancelAnimationFrame(frameId);
+  }, [activeTab, activeSelectedObjectId]);
 
   // Modals state
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
