@@ -161,6 +161,7 @@ export interface Translations {
   singleRoomScope: string;
   selectRoom: string;
   printPhotos: string;
+  photosOnNewPage: string;
   photosSectionTitle: string;
   photosCountUnit: string;
   noPhotosAttached: string;
@@ -401,6 +402,7 @@ export const TRANSLATIONS: Record<Locale, Translations> = {
     singleRoomScope: 'Окреме приміщення',
     selectRoom: 'Оберіть кімнату',
     printPhotos: 'Друкувати фото обʼєкта',
+    photosOnNewPage: 'Фото з нової сторінки',
     photosSectionTitle: 'Фотофіксація приміщення',
     photosCountUnit: 'фото',
     noPhotosAttached: 'Немає доданих фото',
@@ -639,6 +641,7 @@ export const TRANSLATIONS: Record<Locale, Translations> = {
     singleRoomScope: 'Отдельное помещение',
     selectRoom: 'Выберите комнату',
     printPhotos: 'Печатать фото объекта',
+    photosOnNewPage: 'Фото с новой страницы',
     photosSectionTitle: 'Фотофиксация помещения',
     photosCountUnit: 'фото',
     noPhotosAttached: 'Нет прикрепленных фото',
@@ -877,6 +880,7 @@ export const TRANSLATIONS: Record<Locale, Translations> = {
     singleRoomScope: 'Single Room',
     selectRoom: 'Select room',
     printPhotos: 'Print attached photos',
+    photosOnNewPage: 'Photos on new page',
     photosSectionTitle: 'Site Photo Documentation',
     photosCountUnit: 'photos',
     noPhotosAttached: 'No attached photos',

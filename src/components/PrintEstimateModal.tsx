@@ -6,7 +6,8 @@ import {
   Download, 
   FileText,
   Camera,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Maximize2
 } from 'lucide-react';
 import { RoomMeasurement, ObjectProject, Client, MasterProfile, MasterPriceList } from '../types/database';
 import { RoomBlueprint } from './RoomBlueprint';
@@ -140,6 +141,8 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
   }, [isOpen, printScope, selectedSingleId, profile?.masterName, profile?.companyName, docCurrencySymbol]);
 
   const [includePhotos, setIncludePhotos] = useState<boolean>(true);
+  const [photosOnNewPage, setPhotosOnNewPage] = useState<boolean>(false);
+  const [previewPhoto, setPreviewPhoto] = useState<{ url: string; caption?: string } | null>(null);
 
   if (!isOpen) return null;
 
@@ -199,16 +202,65 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
   <style>
-    @page { size: A4 portrait; margin: 10mm; }
+    @page { size: A4 portrait; margin: 8mm; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif; background: #fff; color: #0f172a; padding: 20px; font-size: 11px; line-height: 1.4; max-width: 210mm; margin: 0 auto; }
+    body { font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif; background: #fff; color: #0f172a; padding: 16px; font-size: 11px; line-height: 1.4; max-width: 210mm; margin: 0 auto; }
     table { width: 100%; border-collapse: collapse; margin-top: 6px; margin-bottom: 12px; }
     th { background: #f8fafc; font-weight: 700; text-align: left; padding: 6px 8px; border: 1px solid #cbd5e1; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #475569; }
     td { padding: 6px 8px; border: 1px solid #e2e8f0; font-size: 11px; }
     .page-break-avoid { break-inside: avoid; page-break-inside: avoid; }
+    .page-break-auto { break-inside: auto; page-break-inside: auto; }
+    .page-break-before-always { break-before: page; page-break-before: always; }
+    
+    .print-photo-gallery {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      page-break-inside: auto;
+      break-inside: auto;
+    }
+    .print-photo-card {
+      width: calc(50% - 6px);
+      max-width: calc(50% - 6px);
+      box-sizing: border-box;
+      break-inside: avoid;
+      page-break-inside: avoid;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 6px;
+      margin-bottom: 6px;
+    }
+    .print-photo-img-box {
+      width: 100%;
+      height: 185px;
+      max-height: 185px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      padding: 4px;
+    }
+    .print-photo-img {
+      max-height: 175px;
+      max-width: 100%;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      display: block;
+      margin: 0 auto;
+    }
+
     @media print {
-      body { padding: 0; }
+      body { padding: 0; max-width: 100%; }
       .no-print { display: none !important; }
+      .print-photo-gallery { display: flex !important; flex-wrap: wrap !important; gap: 10px !important; }
+      .print-photo-card { width: calc(50% - 6px) !important; max-width: calc(50% - 6px) !important; flex: 0 0 calc(50% - 6px) !important; page-break-inside: avoid !important; break-inside: avoid !important; }
+      .print-photo-img-box { height: 185px !important; max-height: 185px !important; }
+      .print-photo-img { max-height: 175px !important; object-fit: contain !important; }
     }
   </style>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -299,21 +351,35 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
           {/* Actions & Optional Photo Toggle */}
           <div className="flex flex-wrap items-center gap-2">
             {hasAnyPhotos && (
-              <label className="flex items-center gap-2 cursor-pointer select-none px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 transition text-xs font-semibold text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 shadow-xs">
-                <input
-                  type="checkbox"
-                  checked={includePhotos}
-                  onChange={(e) => setIncludePhotos(e.target.checked)}
-                  className="w-4 h-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500 cursor-pointer accent-cyan-600"
-                />
-                <span className="flex items-center gap-1.5">
-                  <Camera className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
-                  <span>{t.printPhotos}</span>
-                  <span className="px-1.5 py-0.2 rounded-full bg-cyan-100 dark:bg-cyan-950 text-cyan-700 dark:text-cyan-300 text-[10px] font-bold">
-                    {totalPhotosCount}
+              <>
+                <label className="flex items-center gap-2 cursor-pointer select-none px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 transition text-xs font-semibold text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 shadow-xs">
+                  <input
+                    type="checkbox"
+                    checked={includePhotos}
+                    onChange={(e) => setIncludePhotos(e.target.checked)}
+                    className="w-4 h-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500 cursor-pointer accent-cyan-600"
+                  />
+                  <span className="flex items-center gap-1.5">
+                    <Camera className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
+                    <span>{t.printPhotos}</span>
+                    <span className="px-1.5 py-0.2 rounded-full bg-cyan-100 dark:bg-cyan-950 text-cyan-700 dark:text-cyan-300 text-[10px] font-bold">
+                      {totalPhotosCount}
+                    </span>
                   </span>
-                </span>
-              </label>
+                </label>
+
+                {includePhotos && (
+                  <label className="flex items-center gap-1.5 cursor-pointer select-none px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 transition text-xs font-semibold text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 shadow-xs" title="Починати блок фотофіксації з чистої сторінки A4">
+                    <input
+                      type="checkbox"
+                      checked={photosOnNewPage}
+                      onChange={(e) => setPhotosOnNewPage(e.target.checked)}
+                      className="w-3.5 h-3.5 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500 cursor-pointer accent-cyan-600"
+                    />
+                    <span>{t.photosOnNewPage}</span>
+                  </label>
+                )}
+              </>
             )}
 
             <button
@@ -530,61 +596,63 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
                 let rowNum = 1;
 
                 return (
-                  <div key={room.id} className="border border-gray-300 rounded p-4 break-inside-avoid page-break-avoid bg-white">
-                    {/* Room Header (Clean black & white) */}
-                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-black pb-2 mb-3">
-                      <div>
-                        <h3 className="font-extrabold text-sm text-black">
-                          {roomIdx + 1}. {room.name || 'Приміщення'}
-                        </h3>
-                        <p className="text-[11px] text-gray-600">
-                          {getMaterialLabel(room.materialType, locale, roomPrices)} {room.canvasBrand ? `(${room.canvasBrand})` : ''} · {getProfileLabel(room.profileType, locale, roomPrices)}
-                        </p>
+                  <div key={room.id} className="border border-gray-300 rounded p-4 bg-white page-break-auto break-inside-auto mb-6">
+                    {/* Room Header & Blueprint (Kept together to avoid breaking between header and drawing) */}
+                    <div className="page-break-avoid break-inside-avoid">
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-black pb-2 mb-3">
+                        <div>
+                          <h3 className="font-extrabold text-sm text-black">
+                            {roomIdx + 1}. {room.name || 'Приміщення'}
+                          </h3>
+                          <p className="text-[11px] text-gray-600">
+                            {getMaterialLabel(room.materialType, locale, roomPrices)} {room.canvasBrand ? `(${room.canvasBrand})` : ''} · {getProfileLabel(room.profileType, locale, roomPrices)}
+                          </p>
+                        </div>
+                        <div className="text-xs font-mono font-bold text-black">
+                          <span>S = {room.area} м²</span>
+                          <span className="mx-1.5">·</span>
+                          <span>P = {room.perimeter} м.п.</span>
+                          <span className="mx-1.5">·</span>
+                          <span>Кутів: {room.cornersCount || 4}</span>
+                        </div>
                       </div>
-                      <div className="text-xs font-mono font-bold text-black">
-                        <span>S = {room.area} м²</span>
-                        <span className="mx-1.5">·</span>
-                        <span>P = {room.perimeter} м.п.</span>
-                        <span className="mx-1.5">·</span>
-                        <span>Кутів: {room.cornersCount || 4}</span>
-                      </div>
-                    </div>
 
-                    {/* Vector Blueprint Scheme (Full height, no clipping, monochrome) */}
-                    <div className="mb-4 bg-white border border-gray-300 rounded p-2 flex flex-col items-center justify-center">
-                      <div className="w-full max-w-[440px] min-h-[280px] flex items-center justify-center">
-                        <RoomBlueprint
-                          shape={room.shape}
-                          length={room.length}
-                          width={room.width}
-                          height={room.height}
-                          sideA={room.sideA}
-                          sideB={room.sideB}
-                          sideC={room.sideC}
-                          sideD={room.sideD}
-                          sideE={room.sideE}
-                          sideF={room.sideF}
-                          diagonal1={room.diagonal1}
-                          diagonal2={room.diagonal2}
-                          customSides={room.customSides}
-                          customPoints={room.customPoints}
-                          area={room.area}
-                          perimeter={room.perimeter}
-                          options={room.options}
-                          fixtures={room.fixtures}
-                          canvasColorName={room.canvasColor}
-                          isPrint={true}
-                          locale={locale}
-                          t={t}
-                        />
+                      {/* Vector Blueprint Scheme (Full height, no clipping, monochrome) */}
+                      <div className="mb-4 bg-white border border-gray-300 rounded p-2 flex flex-col items-center justify-center">
+                        <div className="w-full max-w-[440px] min-h-[280px] flex items-center justify-center">
+                          <RoomBlueprint
+                            shape={room.shape}
+                            length={room.length}
+                            width={room.width}
+                            height={room.height}
+                            sideA={room.sideA}
+                            sideB={room.sideB}
+                            sideC={room.sideC}
+                            sideD={room.sideD}
+                            sideE={room.sideE}
+                            sideF={room.sideF}
+                            diagonal1={room.diagonal1}
+                            diagonal2={room.diagonal2}
+                            customSides={room.customSides}
+                            customPoints={room.customPoints}
+                            area={room.area}
+                            perimeter={room.perimeter}
+                            options={room.options}
+                            fixtures={room.fixtures}
+                            canvasColorName={room.canvasColor}
+                            isPrint={true}
+                            locale={locale}
+                            t={t}
+                          />
+                        </div>
+                        <span className="text-[10px] text-gray-500 font-mono mt-1">
+                          {t.blueprintSchemeTitle}
+                        </span>
                       </div>
-                      <span className="text-[10px] text-gray-500 font-mono mt-1">
-                        {t.blueprintSchemeTitle}
-                      </span>
                     </div>
 
                     {/* Cost Calculation Table (Pure B&W) */}
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto page-break-avoid break-inside-avoid">
                       <table className="w-full border-collapse text-left text-xs">
                         <thead>
                           <tr className="bg-gray-100 border-y border-black text-black">
@@ -732,36 +800,50 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
 
                     {/* Attached Room Photo Gallery (If enabled and room has photos) */}
                     {includePhotos && room.photos && room.photos.length > 0 && (
-                      <div className="mt-4 pt-3 border-t border-gray-300 break-inside-avoid page-break-avoid">
-                        <div className="flex items-center justify-between mb-2">
+                      <div className={`mt-5 pt-3 border-t border-gray-300 page-break-auto break-inside-auto ${photosOnNewPage ? 'print:break-before-page print:page-break-before-always print:pt-6 print:border-t-0' : ''}`}>
+                        <div className="flex items-center justify-between mb-2.5 page-break-avoid break-inside-avoid">
                           <h4 className="font-bold text-xs text-black uppercase tracking-wider flex items-center gap-1.5">
                             <span>📷 {t.photosSectionTitle}</span>
                             <span className="text-[10px] text-gray-500 font-normal">
                               ({room.photos.length} {t.photosCountUnit})
                             </span>
+                            {targetRooms.length > 1 && (
+                              <span className="text-[10px] text-gray-700 font-semibold ml-1">
+                                — {room.name || 'Приміщення'}
+                              </span>
+                            )}
                           </h4>
                         </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 print:grid-cols-2">
+                        <div className="print-photo-gallery flex flex-wrap gap-2.5 page-break-auto break-inside-auto">
                           {room.photos.map((photo, pIdx) => (
                             <div
                               key={photo.id || pIdx}
-                              className="border border-gray-300 rounded p-1.5 bg-gray-50 flex flex-col break-inside-avoid page-break-avoid"
+                              onClick={() => setPreviewPhoto({ url: photo.dataUrl, caption: photo.caption ? `${room.name}: ${photo.caption}` : `${room.name} — Фото ${pIdx + 1}` })}
+                              className="print-photo-card w-[calc(50%-5px)] sm:w-[calc(33.333%-7px)] border border-gray-300 rounded-lg p-2 bg-gray-50 flex flex-col page-break-avoid break-inside-avoid shadow-2xs hover:border-cyan-500 transition cursor-pointer"
+                              title="Натисніть для збільшення"
                             >
-                              <div className="relative w-full h-36 bg-gray-200 rounded overflow-hidden flex items-center justify-center">
+                              <div className="print-photo-img-box relative w-full h-44 sm:h-52 bg-slate-100 print:bg-white rounded border border-gray-200 flex items-center justify-center p-1 overflow-hidden">
                                 <img
                                   src={photo.dataUrl}
                                   alt={photo.caption || `Фото ${pIdx + 1}`}
-                                  className="w-full h-full object-cover"
+                                  className="print-photo-img max-h-full max-w-full w-auto h-auto object-contain mx-auto block"
                                   loading="eager"
                                 />
+                                <button
+                                  type="button"
+                                  className="no-print absolute top-1.5 right-1.5 p-1 rounded-md bg-black/50 text-white hover:bg-black/80 transition"
+                                  title="Збільшити фото"
+                                >
+                                  <Maximize2 className="w-3 h-3" />
+                                </button>
                               </div>
                               {(photo.caption || photo.timestamp) && (
-                                <div className="mt-1 px-0.5 flex flex-col text-[9px] text-gray-700">
+                                <div className="mt-1.5 px-0.5 flex flex-col text-[9px] text-gray-700 leading-tight">
                                   {photo.caption && (
-                                    <span className="font-semibold text-black truncate">{photo.caption}</span>
+                                    <span className="font-bold text-black line-clamp-2">{photo.caption}</span>
                                   )}
                                   {photo.timestamp && (
-                                    <span className="text-gray-500 font-mono">
+                                    <span className="text-gray-500 font-mono mt-0.5">
                                       {new Date(photo.timestamp).toLocaleDateString(
                                         locale === 'en' ? 'en-US' : locale === 'ru' ? 'ru-RU' : 'uk-UA',
                                         {
@@ -871,6 +953,35 @@ export const PrintEstimateModal: React.FC<PrintEstimateModalProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Photo Fullscreen Zoom Lightbox (Interactive on-screen preview) */}
+      {previewPhoto && (
+        <div
+          className="no-print fixed inset-0 z-[60] bg-black/90 flex flex-col items-center justify-center p-4 backdrop-blur-md animate-fadeIn"
+          onClick={() => setPreviewPhoto(null)}
+        >
+          <div className="relative max-w-4xl max-h-[90vh] flex flex-col items-center">
+            <button
+              type="button"
+              onClick={() => setPreviewPhoto(null)}
+              className="absolute -top-11 right-0 p-2 text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition cursor-pointer"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <img
+              src={previewPhoto.url}
+              alt={previewPhoto.caption || 'Фото'}
+              className="max-h-[80vh] max-w-full w-auto h-auto object-contain rounded-xl shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+            {previewPhoto.caption && (
+              <p className="mt-3 text-white text-sm font-semibold text-center bg-black/60 px-4 py-1.5 rounded-full">
+                {previewPhoto.caption}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
     </div>,
     document.body
   );

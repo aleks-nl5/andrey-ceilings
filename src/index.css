@@ -456,6 +456,66 @@ html:not(.dark) .bg-black\/85 {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
   }
+
+  /* Allow natural multi-page flow for rooms and photo containers */
+  #print-sheet .page-break-auto,
+  .page-break-auto,
+  .break-inside-auto {
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+  }
+
+  /* Explicit page break when requested */
+  #print-sheet .page-break-before-always,
+  .page-break-before-always,
+  .print\\:break-before-page {
+    page-break-before: always !important;
+    break-before: page !important;
+  }
+
+  /* Robust Multi-page Photo Gallery for Chromium, Safari & Firefox */
+  #print-sheet .print-photo-gallery {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+  }
+
+  #print-sheet .print-photo-card {
+    width: calc(50% - 6px) !important;
+    max-width: calc(50% - 6px) !important;
+    flex: 0 0 calc(50% - 6px) !important;
+    box-sizing: border-box !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    margin-bottom: 6px !important;
+    background-color: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+  }
+
+  #print-sheet .print-photo-img-box {
+    height: 185px !important;
+    max-height: 185px !important;
+    background-color: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    padding: 4px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: hidden !important;
+  }
+
+  #print-sheet .print-photo-img {
+    max-height: 175px !important;
+    max-width: 100% !important;
+    width: auto !important;
+    height: auto !important;
+    object-fit: contain !important;
+    display: block !important;
+    margin: 0 auto !important;
+  }
 }
 
 @media screen {
